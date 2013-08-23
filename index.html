@@ -1,0 +1,65 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>ORBIS v2 (.1)</title>
+  <link type="text/css" rel="stylesheet" href="orbis.css" />
+  <meta charset="utf-8" />
+</head>
+
+<body>
+  <div>
+    <a href="https://github.com/emeeks/orbis_v2"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
+    <p style="width:600px;">This is a very rough and buggy early example of new functionality for ORBIS. Please send any bugs or feature requests or other feedback to <a href="mailto:emeeks@stanford.edu">Elijah Meeks (emeeks@stanford.edu)</a></p>
+  </div>
+
+  <div id="vizcontainer">
+    <div id="modal"></div>
+  </div>
+
+  <div id="controlbar">
+    <div class="buttonContainer">
+      <button id="eButton" class="routeLabelButton controlButton active" onclick="colorBy('e')">Expense</button> <button id="sButton" class="routeLabelButton controlButton" onclick="colorBy('s')">Speed</button> <button id="tButton" class="routeLabelButton controlButton" onclick="colorByType()">Type</button>
+    </div>
+
+    <div class="buttonContainer" style="background:#F8F8F8;width:140px">
+      <select id="sourceSelectButton" class="controlButton">
+        </select> <select id="targetSelectButton" class="controlButton">
+        </select> <select id="monthSelectButton" class="controlButton">
+        </select>
+    </div>
+
+    <div class="buttonContainer">
+      <button id="fPriority" class="controlButton priorityButton active" onclick="priorityClick(this)">Fastest</button> <button id="cPriority" class="controlButton priorityButton" onclick="priorityClick(this)">Cheapest</button> <button id="sPriority" class="controlButton priorityButton" onclick="priorityClick(this)">Shortest</button>
+    </div>
+
+    <div class="buttonContainer" style="background:#F8F8F8;width:120px">
+      <button id="roadFlip" class="controlButton active" onclick="flipButton(this)">Road</button> <button id="riverFlip" class="controlButton active" onclick="flipButton(this)">River</button> <button id="coastFlip" class="controlButton active" onclick="flipButton(this)">Coastal Sea</button>
+    </div>
+
+    <div class="buttonContainer" style="background:#F8F8F8;width:100px">
+      <button id="seaFlip" class="controlButton active" onclick="flipButton(this)">Open Sea</button> <button id="dayFlip" class="controlButton" onclick="flipButton(this)">Coastal (Daylight)</button>
+    </div>
+
+    <div class="buttonContainer">
+      <button id="aquaticSea" style="background:lightgreen;" class="controlButton" onclick="aquaticOptions(this)">Civilian River</button> <button id="aquaticRiver" style="background:lightgreen;" class="controlButton" onclick="aquaticOptions(this)">Fast Sea</button>
+    </div>
+
+    <div class="buttonContainer" style="background:#F8F8F8;width:190px">
+      Vehicle Type <select id="vehicleSelectButton" style="width:170px;" class="controlButton" onclick="colorBy('e')">
+        </select> Transfer cost: <input type="text" style="width:30px;" id="transferCost" class="controlButton" onclick="colorByType()" /> days <button style="float:right;">Advanced</button> <button style="float:right;" onclick="clusterSitesUI()">Cluster</button>
+    </div>
+
+    <div style="background:lightred" class="buttonContainer">
+      <button class="controlButton" onclick="calculateRoute()">Calculate Route</button> <button class="controlButton" onclick="cartogramOff()">Cartogram Off</button>
+    </div>
+  </div>
+
+  <footer>
+    <script src="o_settings.js" type="text/javascript">
+</script> <script src="d3.v3.min.js" type="text/javascript">
+</script> <script src="d3.geo.tile.v0.min.js" type="text/javascript">
+</script> <script src="topojson.v0.min.js" type="text/javascript">
+</script> <script src="orbis.js" type="text/javascript">
+</script>
+  </footer>
+</body>
+</html>

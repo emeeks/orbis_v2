@@ -1,0 +1,50 @@
+body {
+  margin: 0;
+}
+
+path {
+  fill: none;
+  stroke: red;
+  stroke-linejoin: round;
+  stroke-width: 1.5px;
+}
+
+#controlbar {
+  height:100px;
+}
+
+#modal {
+  position:absolute;
+  z-index: 1;
+  background: white;
+  border: solid 1px lightgray;
+  display: none;
+  padding: 0 20px;
+}
+
+.buttonContainer {
+  width: 90px;
+  background: #F0F0F0;
+  height: 100%;
+  float: left;
+}
+
+.controlButton {
+  margin: 2px 10px;
+  border: black 2px solid;
+  font-size: 14px;
+  max-width:120px;
+  cursor:pointer;
+}
+
+.controlButton:hover {
+  background:pink;
+}
+
+.controlButton.active {
+  background: orange;
+}
+
+.controlButton.disabled {
+  background: lightgray;
+}
