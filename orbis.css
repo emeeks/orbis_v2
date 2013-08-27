@@ -25,6 +25,10 @@ path {
 #sitemodal {
 }
 
+#routemodal {
+  max-width: 300px;
+  z-index: 2;
+}
 .buttonContainer {
   width: 90px;
   background: #F0F0F0;

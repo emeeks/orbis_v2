@@ -5,6 +5,7 @@
   //This is an array to hold the carto settings for reference by the clustering function
   cartogramsRun = [];
   refreshSet = 0;
+  currentRoute = 0;
 
 var typeHash = {road: "brown", overseas: "green", coastal: "lightgreen", upstream: "blue", downstream: "blue", ferry: "purple"}
 
@@ -202,8 +203,8 @@ function zoomComplete() {
 function zoomed() {
   d3.selectAll(".routes").style("display", "none")
   d3.selectAll(".results").style("display", "none")
-
-d3.select("#sitemodal").style("display", "none");
+  d3.selectAll(".modal").style("display", "none");
+  d3.selectAll(".results").style("stroke", function(d) {return typeHash[d.properties.segment_type]})
 
 	clearTimeout(refreshTimer);
 	refreshTimer = setTimeout('zoomComplete()', 100);
@@ -226,6 +227,7 @@ d3.select("#sitemodal").style("display", "none");
 
   image.enter().append("image")
       .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/elijahmeeks.map-zm593ocx/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+//      .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/elijahmeeks.catal02.html/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
       .attr("width", 1)
       .attr("height", 1)
       .attr("x", function(d) { return d[0]; })
@@ -453,6 +455,14 @@ function calculateRoute() {
   var newSettings = getSettings();  
   d3.json(routeQuery, function(error,routeData) {
     exposedNewData = routeData;
+    // Each segment needs to be tagged with the current route id so that later we can pull them out to measure them and show them
+    for (x in routeData.features) {
+      if (routeData.features[x]) {
+	routeData.features[x].properties.routeID = currentRoute;
+      }
+    }
+    currentRoute++;
+    
     for (x in routeData.features) {
       routesRun.push(routeData.features[x])
     }
@@ -468,9 +478,12 @@ function calculateRoute() {
     .style("stroke", function(d) {return typeHash[d.properties.segment_type]})
     .style("stroke-width", 4)
     .style("opacity", .75)
-    .on("click", function(d,i) {d3.selectAll(this).style("stroke", "pink");routeClick(d,i);})
+    .style("cursor", "pointer")
+    .on("click", routeClick)
 
     zoomed();
+    populateRouteDialogue(getSettings.source,getSettings.target,currentRoute - 1);  
+
   })
 }
 
@@ -513,7 +526,7 @@ function getSettings() {
 }
 
 function routeClick(d,i) {
-    d3.event.stopPropagation();
+  d3.event.stopPropagation();
   var coords = d3.mouse(document.body);
   var modalContents = d3.select("#sitemodal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
   
@@ -523,6 +536,29 @@ function routeClick(d,i) {
   modalContents.append("p").html("Expense (D): " + d.properties.segmentexpense_d);
   modalContents.append("p").html("Expense (W): " + d.properties.segmentexpense_w);
   modalContents.append("p").html("Expense (C): " + d.properties.segmentexpense_c);
+  
+  populateRouteDialogue(d.properties.source,d.properties.target,d.properties.routeID);  
+}
+
+function populateRouteDialogue(inSource,inTarget,inRouteID) {
+  d3.selectAll(".results").style("stroke", function(d) {return d.properties.routeID == inRouteID ? "white" : "gray"})
+  
+  var routeModalContents = d3.select("#routemodal").style("display", "block").style("left", "40px").style("top", "200px").html('')
+  var segmentNumber = routesRun.filter(function (el) {return el.properties.routeID == inRouteID}).length;
+  var durationSum = d3.sum(routesRun.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentduration})
+  var lengthSum = d3.sum(routesRun.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentlength})
+  var expCSum = d3.sum(routesRun.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentexpense_c})
+  var expDSum = d3.sum(routesRun.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentexpense_d})
+  var expWSum = d3.sum(routesRun.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentexpense_w})
+  
+  routeModalContents.append("p").html("From " + inSource + " to " + inTarget)
+  routeModalContents.append("p").html("There are " + segmentNumber + " segments (including transfers) for a total length of " +Math.floor(lengthSum) + "km")
+  routeModalContents.append("p").html("The trip would last " + d3.round(durationSum,3) + " days")
+  routeModalContents.append("p").html("Transport of 1kg of grain would have cost:")
+  routeModalContents.append("p").html(" * " + d3.round(expDSum,3) + " by donkey")
+  routeModalContents.append("p").html(" * " + d3.round(expWSum,3) + " by donkey")
+  routeModalContents.append("p").html("" + d3.round(expCSum,3) + " per passenger")
+  
 }
 
 function onOffSite(d) {
@@ -535,8 +571,7 @@ function onOffSite(d) {
   excludedSites.push("4" +d.id+ "")
 }
 
-function clusterSitesUI() {
-  
+function clusterSitesUI() {  
   var modalContents = d3.select("#sitemodal").style("display", "block").style("left", "200px").style("top", "200px").html('')
   modalContents.append("h2").html("Cluster Settings")
   
@@ -568,7 +603,6 @@ function clusterSitesUI() {
   
   modalContents.append("p").append("button").on("click", clusterSites).html("Cluster")
   modalContents.append("p").append("button").on("click", drawBorders).html("Borders")
-
 }
 
 function updateClusterUIList () {
