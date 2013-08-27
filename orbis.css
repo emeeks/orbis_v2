@@ -13,11 +13,7 @@ path {
   height:100px;
 }
 
-<<<<<<< HEAD
 .modal {
-=======
-#modal {
->>>>>>> 27ba3818f7de689a6aa3f923a4e976a9772db490
   position:absolute;
   z-index: 1;
   background: white;
@@ -26,7 +22,6 @@ path {
   padding: 0 20px;
 }
 
-<<<<<<< HEAD
 #sitemodal {
 }
 
@@ -34,8 +29,7 @@ path {
   max-width: 300px;
   z-index: 2;
 }
-=======
->>>>>>> 27ba3818f7de689a6aa3f923a4e976a9772db490
+
 .buttonContainer {
   width: 90px;
   background: #F0F0F0;

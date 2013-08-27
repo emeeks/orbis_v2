@@ -5,10 +5,7 @@
   //This is an array to hold the carto settings for reference by the clustering function
   cartogramsRun = [];
   refreshSet = 0;
-<<<<<<< HEAD
   currentRoute = 0;
-=======
->>>>>>> 27ba3818f7de689a6aa3f923a4e976a9772db490
 
 var typeHash = {road: "brown", overseas: "green", coastal: "lightgreen", upstream: "blue", downstream: "blue", ferry: "purple"}
 
@@ -42,11 +39,7 @@ projection
 svg = d3.select("#vizcontainer").append("svg")
     .attr("width", width)
     .attr("height", height)
-<<<<<<< HEAD
-    .on("click", function() {d3.select("#").style("display", "none")});
-=======
-    .on("click", function() {d3.select("#modal").style("display", "none")});
->>>>>>> 27ba3818f7de689a6aa3f923a4e976a9772db490
+    .on("click", function() {d3.select(".modal").style("display", "none")});
 
 var raster = svg.append("g");
 
@@ -210,13 +203,8 @@ function zoomComplete() {
 function zoomed() {
   d3.selectAll(".routes").style("display", "none")
   d3.selectAll(".results").style("display", "none")
-<<<<<<< HEAD
   d3.selectAll(".modal").style("display", "none");
   d3.selectAll(".results").style("stroke", function(d) {return typeHash[d.properties.segment_type]})
-=======
-
-d3.select("#modal").style("display", "none");
->>>>>>> 27ba3818f7de689a6aa3f923a4e976a9772db490
 
 	clearTimeout(refreshTimer);
 	refreshTimer = setTimeout('zoomComplete()', 100);
@@ -239,10 +227,6 @@ d3.select("#modal").style("display", "none");
 
   image.enter().append("image")
       .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/elijahmeeks.map-zm593ocx/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
-<<<<<<< HEAD
-//      .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/elijahmeeks.catal02.html/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
-=======
->>>>>>> 27ba3818f7de689a6aa3f923a4e976a9772db490
       .attr("width", 1)
       .attr("height", 1)
       .attr("x", function(d) { return d[0]; })
@@ -290,11 +274,7 @@ function siteClick(d,i) {
   this.parentNode.appendChild(this);
   d3.event.stopPropagation();
   var coords = d3.mouse(document.body);
-<<<<<<< HEAD
   var modalContents = d3.select("#sitemodal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
-=======
-  var modalContents = d3.select("#modal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
->>>>>>> 27ba3818f7de689a6aa3f923a4e976a9772db490
   
   modalContents.append("p").html(d.label)
     modalContents.append("p").attr("id","showLabelButton").style("display","none").html("<button onclick='siteLabel(\"site_g_"+d.id+"\")'>Label</button>")
@@ -387,11 +367,7 @@ function aquaticOptions(button) {
 
 function cartogram(centerX,centerY,centerID) {
 
-<<<<<<< HEAD
   d3.select("#sitemodal").style("display", "none");
-=======
-  d3.select("#modal").style("display", "none");
->>>>>>> 27ba3818f7de689a6aa3f923a4e976a9772db490
   d3.select("#hullButton").style("display","none");
   
   cartogramRunning = true;
@@ -463,11 +439,7 @@ function cartogram(centerX,centerY,centerID) {
 }
 
 function cartogramOff() {
-<<<<<<< HEAD
   d3.select("#sitemodal").style("display", "none");
-=======
-  d3.select("#modal").style("display", "none");
->>>>>>> 27ba3818f7de689a6aa3f923a4e976a9772db490
   cartogramRunning = false;
   d3.selectAll("image").style("display", "block");
   d3.selectAll("path").style("display", "block");
@@ -482,7 +454,6 @@ function calculateRoute() {
   var newSettings = getSettings();  
   d3.json(routeQuery, function(error,routeData) {
     exposedNewData = routeData;
-<<<<<<< HEAD
     // Each segment needs to be tagged with the current route id so that later we can pull them out to measure them and show them
     for (x in routeData.features) {
       if (routeData.features[x]) {
@@ -490,9 +461,6 @@ function calculateRoute() {
       }
     }
     currentRoute++;
-    
-=======
->>>>>>> 27ba3818f7de689a6aa3f923a4e976a9772db490
     for (x in routeData.features) {
       routesRun.push(routeData.features[x])
     }
@@ -508,18 +476,11 @@ function calculateRoute() {
     .style("stroke", function(d) {return typeHash[d.properties.segment_type]})
     .style("stroke-width", 4)
     .style("opacity", .75)
-<<<<<<< HEAD
     .style("cursor", "pointer")
     .on("click", routeClick)
 
     zoomed();
     populateRouteDialogue(getSettings.source,getSettings.target,currentRoute - 1);  
-
-=======
-    .on("click", function(d,i) {d3.selectAll(this).style("stroke", "pink");routeClick(d,i);})
-
-    zoomed();
->>>>>>> 27ba3818f7de689a6aa3f923a4e976a9772db490
   })
 }
 
@@ -562,24 +523,16 @@ function getSettings() {
 }
 
 function routeClick(d,i) {
-<<<<<<< HEAD
   d3.event.stopPropagation();
   var coords = d3.mouse(document.body);
   var modalContents = d3.select("#sitemodal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
-=======
-    d3.event.stopPropagation();
-  var coords = d3.mouse(document.body);
-  var modalContents = d3.select("#modal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
->>>>>>> 27ba3818f7de689a6aa3f923a4e976a9772db490
   
   modalContents.append("p").html(d.properties.segment_type)
   modalContents.append("p").html("Duration: " + d.properties.segmentduration);
   modalContents.append("p").html("Length: " + d.properties.segmentlength);
   modalContents.append("p").html("Expense (D): " + d.properties.segmentexpense_d);
   modalContents.append("p").html("Expense (W): " + d.properties.segmentexpense_w);
-  modalContents.append("p").html("Expense (C): " + d.properties.segmentexpense_c);
-<<<<<<< HEAD
-  
+  modalContents.append("p").html("Expense (C): " + d.properties.segmentexpense_c);  
   populateRouteDialogue(d.properties.source,d.properties.target,d.properties.routeID);  
 }
 
@@ -601,9 +554,6 @@ function populateRouteDialogue(inSource,inTarget,inRouteID) {
   routeModalContents.append("p").html(" * " + d3.round(expDSum,3) + " by donkey")
   routeModalContents.append("p").html(" * " + d3.round(expWSum,3) + " by donkey")
   routeModalContents.append("p").html("" + d3.round(expCSum,3) + " per passenger")
-  
-=======
->>>>>>> 27ba3818f7de689a6aa3f923a4e976a9772db490
 }
 
 function onOffSite(d) {
@@ -616,14 +566,8 @@ function onOffSite(d) {
   excludedSites.push("4" +d.id+ "")
 }
 
-<<<<<<< HEAD
 function clusterSitesUI() {  
   var modalContents = d3.select("#sitemodal").style("display", "block").style("left", "200px").style("top", "200px").html('')
-=======
-function clusterSitesUI() {
-  
-  var modalContents = d3.select("#modal").style("display", "block").style("left", "200px").style("top", "200px").html('')
->>>>>>> 27ba3818f7de689a6aa3f923a4e976a9772db490
   modalContents.append("h2").html("Cluster Settings")
   
   var newSelector = modalContents.append("select").attr("id","clusterPrioritySelector").on("change", updateClusterUIList)
@@ -654,10 +598,6 @@ function clusterSitesUI() {
   
   modalContents.append("p").append("button").on("click", clusterSites).html("Cluster")
   modalContents.append("p").append("button").on("click", drawBorders).html("Borders")
-<<<<<<< HEAD
-=======
-
->>>>>>> 27ba3818f7de689a6aa3f923a4e976a9772db490
 }
 
 function updateClusterUIList () {
