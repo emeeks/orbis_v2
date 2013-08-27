@@ -38,7 +38,7 @@ projection
 svg = d3.select("#vizcontainer").append("svg")
     .attr("width", width)
     .attr("height", height)
-    .on("click", function() {d3.select("#modal").style("display", "none")});
+    .on("click", function() {d3.select("#").style("display", "none")});
 
 var raster = svg.append("g");
 
@@ -203,7 +203,7 @@ function zoomed() {
   d3.selectAll(".routes").style("display", "none")
   d3.selectAll(".results").style("display", "none")
 
-d3.select("#modal").style("display", "none");
+d3.select("#sitemodal").style("display", "none");
 
 	clearTimeout(refreshTimer);
 	refreshTimer = setTimeout('zoomComplete()', 100);
@@ -273,7 +273,7 @@ function siteClick(d,i) {
   this.parentNode.appendChild(this);
   d3.event.stopPropagation();
   var coords = d3.mouse(document.body);
-  var modalContents = d3.select("#modal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
+  var modalContents = d3.select("#sitemodal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
   
   modalContents.append("p").html(d.label)
     modalContents.append("p").attr("id","showLabelButton").style("display","none").html("<button onclick='siteLabel(\"site_g_"+d.id+"\")'>Label</button>")
@@ -366,7 +366,7 @@ function aquaticOptions(button) {
 
 function cartogram(centerX,centerY,centerID) {
 
-  d3.select("#modal").style("display", "none");
+  d3.select("#sitemodal").style("display", "none");
   d3.select("#hullButton").style("display","none");
   
   cartogramRunning = true;
@@ -438,7 +438,7 @@ function cartogram(centerX,centerY,centerID) {
 }
 
 function cartogramOff() {
-  d3.select("#modal").style("display", "none");
+  d3.select("#sitemodal").style("display", "none");
   cartogramRunning = false;
   d3.selectAll("image").style("display", "block");
   d3.selectAll("path").style("display", "block");
@@ -515,7 +515,7 @@ function getSettings() {
 function routeClick(d,i) {
     d3.event.stopPropagation();
   var coords = d3.mouse(document.body);
-  var modalContents = d3.select("#modal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
+  var modalContents = d3.select("#sitemodal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
   
   modalContents.append("p").html(d.properties.segment_type)
   modalContents.append("p").html("Duration: " + d.properties.segmentduration);
@@ -537,7 +537,7 @@ function onOffSite(d) {
 
 function clusterSitesUI() {
   
-  var modalContents = d3.select("#modal").style("display", "block").style("left", "200px").style("top", "200px").html('')
+  var modalContents = d3.select("#sitemodal").style("display", "block").style("left", "200px").style("top", "200px").html('')
   modalContents.append("h2").html("Cluster Settings")
   
   var newSelector = modalContents.append("select").attr("id","clusterPrioritySelector").on("change", updateClusterUIList)

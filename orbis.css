@@ -13,13 +13,16 @@ path {
   height:100px;
 }
 
-#modal {
+.modal {
   position:absolute;
   z-index: 1;
   background: white;
   border: solid 1px lightgray;
   display: none;
   padding: 0 20px;
+}
+
+#sitemodal {
 }
 
 .buttonContainer {
