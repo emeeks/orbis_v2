@@ -13,6 +13,10 @@ path {
   height:100px;
 }
 
+#timelineviz {
+  height:100px;
+}
+
 .modal {
   position:absolute;
   z-index: 1;

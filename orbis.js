@@ -81,6 +81,13 @@ d3.csv("sites.csv", function(error, sites) {
       exposedsites[x].nearestCluster = 0;
     }
   }
+  exposedsites.sort(function(a,b) {
+    if (a.label > b.label)
+    return 1;
+    if (a.label < b.label)
+    return -1;
+    return 0;
+    });
   var osites = sitesG.selectAll(".sites")
   .data(exposedsites)
   .enter()
@@ -155,16 +162,18 @@ siteLabel("site_g_"+initialLabels[x]);
 
 function startUp() {
     d3.select("#sourceSelectButton").selectAll("option")
-  .data(exposedsites)
+  .data(exposedsites.filter(function (el) {return el.label != "x"}))
   .enter()
   .append("option")
+  .style("display", function(d) {return d.label == "x" ? "none" : "block"})
   .html(function(d) {return d.label})
   .attr("value", function(d) {return d.id})
 
-      d3.select("#targetSelectButton").selectAll("option")
-  .data(exposedsites)
+  d3.select("#targetSelectButton").selectAll("option")
+  .data(exposedsites.filter(function (el) {return el.label != "x"}))
   .enter()
   .append("option")
+  .style("display", function(d) {return d.label == "x" ? "none" : "block"})
   .html(function(d) {return d.label})
   .attr("value", function(d) {return d.id})
 
