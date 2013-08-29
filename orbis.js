@@ -72,6 +72,7 @@ d3.json("july_topo.json", function(error, routes) {
 
 d3.csv("sites.csv", function(error, sites) {
   exposedsites = sites;
+  siteHash = {};
   var sitesG = svg.append("g").attr("id","sitesG")
         .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
   for (x in exposedsites) {
@@ -79,6 +80,7 @@ d3.csv("sites.csv", function(error, sites) {
       //Make this attribute an array to hold all the costs you've run
       exposedsites[x].cost = [];
       exposedsites[x].nearestCluster = 0;
+      siteHash[exposedsites[x].id] = exposedsites[x].label;
     }
   }
   exposedsites.sort(function(a,b) {
