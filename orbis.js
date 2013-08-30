@@ -1,9 +1,10 @@
 
   cartogramRunning = false;
-  routesRun = [];
+  routeSegments = [];
   excludedSites = [999];
   //This is an array to hold the carto settings for reference by the clustering function
   cartogramsRun = [];
+  routesRun = [];
   refreshSet = 0;
   currentRoute = 0;
 
@@ -148,7 +149,7 @@ siteLabel("site_g_"+initialLabels[x]);
 }
 
   svg.selectAll("path.results")
-    .data(routesRun)
+    .data(routeSegments)
     .enter()
     .insert("path", "#sitesG")
     .attr("d", path)
@@ -462,7 +463,8 @@ function cartogramOff() {
 }
 
 function calculateRoute() {
-  var newSettings = getSettings();  
+  var newSettings = getSettings();
+  routesRun.splice(0,0,newSettings)
   d3.json(routeQuery, function(error,routeData) {
     exposedNewData = routeData;
     // Each segment needs to be tagged with the current route id so that later we can pull them out to measure them and show them
@@ -473,13 +475,13 @@ function calculateRoute() {
     }
     currentRoute++;
     for (x in routeData.features) {
-      routesRun.push(routeData.features[x])
+      routeSegments.push(routeData.features[x])
     }
 
   svg.selectAll("path.results").remove();
   
   svg.selectAll("path.results")
-    .data(routesRun)
+    .data(routeSegments)
     .enter()
     .insert("path", "#sitesG")
     .attr("d", path)
@@ -491,7 +493,7 @@ function calculateRoute() {
     .on("click", routeClick)
 
     zoomed();
-    populateRouteDialogue(getSettings.source,getSettings.target,currentRoute - 1);  
+    populateRouteDialogue(newSettings.source,newSettings.target,currentRoute - 1);  
   })
 }
 
@@ -538,25 +540,40 @@ function routeClick(d,i) {
   var coords = d3.mouse(document.body);
   var modalContents = d3.select("#sitemodal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
   
-  modalContents.append("p").html(d.properties.segment_type)
+  modalContents.append("div").attr("class", "routeArrowLeftUnder");
+  modalContents.append("div").attr("class", "routeArrowLeft");
+  modalContents.append("p").html(d.properties.segment_type + " route from " + idToLabel(d.properties.source) + " to " + idToLabel(d.properties.target))
   modalContents.append("p").html("Duration: " + d.properties.segmentduration);
   modalContents.append("p").html("Length: " + d.properties.segmentlength);
   modalContents.append("p").html("Expense (D): " + d.properties.segmentexpense_d);
   modalContents.append("p").html("Expense (W): " + d.properties.segmentexpense_w);
   modalContents.append("p").html("Expense (C): " + d.properties.segmentexpense_c);  
-  populateRouteDialogue(d.properties.source,d.properties.target,d.properties.routeID);  
+  populateRouteDialogue(routesRun[d.properties.routeID].source,routesRun[d.properties.routeID].target,d.properties.routeID);
+  d3.select(this).style("stroke", "red")
+
+}
+
+function idToLabel(inID) {
+  //Trim the meta-nodes such that they have the IDs of their parent nodes
+  //We can do this easily because metanodes are 1 character longer than normal nodes
+  return siteHash[parseInt(inID.toString().length == 6 ? inID.toString().substring(1,6) : inID)];
+  
 }
 
 function populateRouteDialogue(inSource,inTarget,inRouteID) {
+  
+  inSource = idToLabel(inSource);
+  inTarget = idToLabel(inTarget);
+
   d3.selectAll(".results").style("stroke", function(d) {return d.properties.routeID == inRouteID ? "white" : "gray"})
   
   var routeModalContents = d3.select("#routemodal").style("display", "block").style("left", "40px").style("top", "200px").html('')
-  var segmentNumber = routesRun.filter(function (el) {return el.properties.routeID == inRouteID}).length;
-  var durationSum = d3.sum(routesRun.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentduration})
-  var lengthSum = d3.sum(routesRun.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentlength})
-  var expCSum = d3.sum(routesRun.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentexpense_c})
-  var expDSum = d3.sum(routesRun.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentexpense_d})
-  var expWSum = d3.sum(routesRun.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentexpense_w})
+  var segmentNumber = routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}).length;
+  var durationSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentduration})
+  var lengthSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentlength})
+  var expCSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentexpense_c})
+  var expDSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentexpense_d})
+  var expWSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentexpense_w})
   
   routeModalContents.append("p").html("From " + inSource + " to " + inTarget)
   routeModalContents.append("p").html("There are " + segmentNumber + " segments (including transfers) for a total length of " +Math.floor(lengthSum) + "km")
