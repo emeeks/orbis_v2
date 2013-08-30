@@ -188,7 +188,18 @@ function startUp() {
   .attr("value", function(d,i) {return i + 1})
 
   d3.select("#vehicleSelectButton").selectAll("option")
-  .data([{l: 'Donkey',v: 'donkey',p:"c"},{l: 'Donkey',v: 'donkey',p:"c"},{l: 'Donkey',v: 'donkey',p:"c"},{l: 'Donkey',v: 'donkey',p:"c"},{l: 'Donkey',v: 'donkey',p:"c"},{l: 'Donkey',v: 'donkey',p:"c"},{l: 'Donkey',v: 'donkey',p:"c"},{l: 'Wagon', v:'wagon',p:"c"},{l: 'Passenger', v:'passenger',p:"c"}])
+  .data([{l: 'Foot (30km/day)',v: 'foot',p:"c"},
+	 {l: 'Oxcart (12km/day)',v: 'oxcart',p:"c"},
+	 {l: 'Porter (30km/day)',v: 'porter',p:"c"},
+	 {l: 'Horse (56km/day)',v: 'donkey',p:"c"},
+	 {l: 'Private (36km/day)',v: 'privateroutine',p:"c"},
+	 {l: 'Private (50km/day)',v: 'privateaccelerated',p:"c"},
+	 {l: 'Fast Carriage (67km/day)',v: 'fastcarriage',p:"c"},
+	 {l: 'Horse Relay (250km/day)',v: 'horserelay',p:"c"},
+	 {l: 'Rapid Military March (60km/day)',v: 'rapidmarch',p:"c"},
+	 {l: 'Donkey',v: 'donkey',p:"c"},
+	 {l: 'Wagon', v:'wagon',p:"c"},
+	 {l: 'Passenger', v:'carriage',p:"c"}])
   .enter()
   .append("option")
   .html(function(d) {return d.l})
@@ -580,7 +591,7 @@ function populateRouteDialogue(inSource,inTarget,inRouteID) {
   routeModalContents.append("p").html("The trip would last " + d3.round(durationSum,3) + " days")
   routeModalContents.append("p").html("Transport of 1kg of grain would have cost:")
   routeModalContents.append("p").html(" * " + d3.round(expDSum,3) + " by donkey")
-  routeModalContents.append("p").html(" * " + d3.round(expWSum,3) + " by donkey")
+  routeModalContents.append("p").html(" * " + d3.round(expWSum,3) + " by wagon")
   routeModalContents.append("p").html("" + d3.round(expCSum,3) + " per passenger")
 }
 
