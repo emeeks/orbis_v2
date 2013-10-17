@@ -6,8 +6,8 @@
 </head>
 
 <body>
-  <div>
-    <a href="https://github.com/emeeks/orbis_v2"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
+  <div style="position: fixed; bottom:10px; right:10px; background: white;">
+    <a href="https://github.com/emeeks/orbis_v2"><img style="position: fixed; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
     <p style="width:600px;">This is a very rough and buggy early example of new functionality for ORBIS. Please send any bugs or feature requests or other feedback to <a href="mailto:emeeks@stanford.edu">Elijah Meeks (emeeks@stanford.edu)</a></p>
   </div>
 
@@ -16,27 +16,62 @@
     <div id="sitemodal" class="modal"></div>
   </div>
 
-  <div id="controlbar">
-    <div class="buttonContainer">
+    <div style="position: fixed; top: 10%; right: 0px; height:100px; width: 200px; background: white;">
+    <div class="buttonContainer" style="width: 180px;">
+      <p>Recently Run</p>
+      <button>Routes</button><button>Cartograms</button>
+      <p>You can also browse routes and cartograms run on ORBIS:</p>
+      <button>Explore Routes and Cartograms</button>
+      <p>Color the network by priority to get a sense of how the network changes based on priority.</p>
       <button id="eButton" class="routeLabelButton controlButton active" onclick="colorBy('e')">Expense</button> <button id="sButton" class="routeLabelButton controlButton" onclick="colorBy('s')">Speed</button> <button id="tButton" class="routeLabelButton controlButton" onclick="colorByType()">Type</button>
+      <p>You can restore the map view by turning off the cartogram.</p>
+      <button class="controlButton" onclick="cartogramOff()">Reset Map</button>
+      <p>Once you've run several cartograms of the same kind, you can cluster sites to see regions.</p>
+      <button style="float:right;" onclick="clusterSitesUI()">Cluster</button>
+    </div>
     </div>
 
+  <div id="controlbar" style="position: fixed; top: 10%; left: 0px; height:80%; width: 230px; background: white;">
     <div class="buttonContainer" style="background:#F8F8F8;width:140px">
       <select id="sourceSelectButton" class="controlButton">
         </select> <select id="targetSelectButton" class="controlButton">
-        </select> <select id="monthSelectButton" class="controlButton">
         </select>
+    </div>
+    <div class="buttonContainer">
+      <fieldset id="monthPicker">
+      <input type="radio" name="month" value="1" id="jan">
+      <label for="jan" class="month-picker-label">Jan</label>
+      <input type="radio" name="month" value="2" id="feb">
+      <label for="feb" class="month-picker-label">Feb</label>
+      <input type="radio" name="month" value="3" id="mar">
+      <label for="mar" class="month-picker-label">Mar</label>
+      <input type="radio" name="month" value="4" id="apr">
+      <label for="apr" class="month-picker-label">Apr</label>
+      <input type="radio" name="month" value="5" id="may">
+      <label for="may" class="month-picker-label">May</label>
+      <input type="radio" name="month" value="6" id="jun">
+      <label for="jun" class="month-picker-label">Jun</label>
+      <input type="radio" name="month" value="7" id="jul">
+      <label for="jul" class="month-picker-label">Jul</label>
+      <input type="radio" name="month" value="8" id="aug">
+      <label for="aug" class="month-picker-label">Aug</label>
+      <input type="radio" name="month" value="9" id="sep" checked="">
+      <label for="sep" class="month-picker-label">Sep</label>
+      <input type="radio" name="month" value="10" id="oct">
+      <label for="oct" class="month-picker-label">Oct</label>
+      <input type="radio" name="month" value="11" id="nov">
+      <label for="nov" class="month-picker-label">Nov</label>
+      <input type="radio" name="month" value="12" id="dec">
+      <label for="dec" class="month-picker-label">Dec</label>
+    </fieldset>
     </div>
 
     <div class="buttonContainer">
       <button id="fPriority" class="controlButton priorityButton active" onclick="priorityClick(this)">Fastest</button> <button id="cPriority" class="controlButton priorityButton" onclick="priorityClick(this)">Cheapest</button> <button id="sPriority" class="controlButton priorityButton" onclick="priorityClick(this)">Shortest</button>
     </div>
 
-    <div class="buttonContainer" style="background:#F8F8F8;width:120px">
+    <div class="buttonContainer" style="background:#F8F8F8;width:210px">
       <button id="roadFlip" class="controlButton active" onclick="flipButton(this)">Road</button> <button id="riverFlip" class="controlButton active" onclick="flipButton(this)">River</button> <button id="coastFlip" class="controlButton active" onclick="flipButton(this)">Coastal Sea</button>
-    </div>
-
-    <div class="buttonContainer" style="background:#F8F8F8;width:100px">
       <button id="seaFlip" class="controlButton active" onclick="flipButton(this)">Open Sea</button> <button id="dayFlip" class="controlButton" onclick="flipButton(this)">Coastal (Daylight)</button>
     </div>
 
@@ -46,14 +81,15 @@
 
     <div class="buttonContainer" style="background:#F8F8F8;width:190px">
       Vehicle Type <select id="vehicleSelectButton" style="width:170px;" class="controlButton" onclick="colorBy('e')">
-        </select> Transfer cost: <input type="text" style="width:30px;" id="transferCost" class="controlButton" onclick="colorByType()" /> days <button style="float:right;">Advanced</button> <button style="float:right;" onclick="clusterSitesUI()">Cluster</button>
+        </select> Transfer cost: <input type="text" style="width:30px;" id="transferCost" class="controlButton" onclick="colorByType()" /> days <button style="float:right;">Advanced</button> 
     </div>
 
     <div style="background:lightred" class="buttonContainer">
-      <button class="controlButton" onclick="calculateRoute()">Calculate Route</button> <button class="controlButton" onclick="cartogramOff()">Cartogram Off</button>
+      <button class="controlButton" onclick="calculateRoute()">Calculate Route</button>
+          <div id="routeResults" class="modal"></div>
     </div>
   </div>
-  <div id="timelineViz"></div>
+  <div id="timelineViz" style="display: none;"></div>
 
   <footer>
     <script src="o_settings.js" type="text/javascript">

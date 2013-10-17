@@ -10,8 +10,8 @@
 
 var typeHash = {road: "brown", overseas: "green", coastal: "lightgreen", upstream: "blue", downstream: "blue", ferry: "purple"}
 
-var width = Math.max(960),
-    height = Math.max(500);
+var width = Math.max(1600),
+    height = Math.max(1000);
 
 var tile = d3.geo.tile()
     .size([width, height]);
@@ -38,13 +38,13 @@ projection
     .translate([0, 0]);
 
 svg = d3.select("#vizcontainer").append("svg")
-    .attr("width", width)
-    .attr("height", height)
+    .attr("width", "100%")
+    .attr("height", "100%")
     .on("click", function() {d3.select(".modal").style("display", "none")});
 
 var raster = svg.append("g");
 
-colorRamp=d3.scale.linear().domain([0,1,5,10]).range(["green", "yellow","orange","red"])
+colorRamp=d3.scale.linear().domain([0,1,5,10]).range(["#004e99","#7e8fc3","#c28711","#ad5041"])
 
 d3.json("july_topo.json", function(error, routes) {
   exposedroutes = routes;
@@ -139,7 +139,7 @@ d3.csv("sites.csv", function(error, sites) {
   .attr("r", 25 / zoom.scale())
   .attr("cx", -2 / zoom.scale())
   .attr("cy", -2 / zoom.scale())
-  .style("fill", "brown")
+  .style("fill", "#ad5041")
   .attr("class", "sitecirctop")
 
 var initialLabels = [50024,50017,50107,50108,50429,50235,50129,50341,50327]
@@ -179,13 +179,6 @@ function startUp() {
   .style("display", function(d) {return d.label == "x" ? "none" : "block"})
   .html(function(d) {return d.label})
   .attr("value", function(d) {return d.id})
-
-  d3.select("#monthSelectButton").selectAll("option")
-  .data(['January','February','March','April','May','June','July','August','September','October','November','December'])
-  .enter()
-  .append("option")
-  .html(function(d) {return d})
-  .attr("value", function(d,i) {return i + 1})
 
   d3.select("#vehicleSelectButton").selectAll("option")
   .data([{l: 'Foot (30km/day)',v: 'foot',p:"c"},
@@ -249,12 +242,11 @@ function zoomed() {
       .remove();
 
   image.enter().append("image")
-      .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/elijahmeeks.map-zm593ocx/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+      .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/elijahmeeks.map-ktkeam22/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
       .attr("width", 1)
       .attr("height", 1)
       .attr("x", function(d) { return d[0]; })
       .attr("y", function(d) { return d[1]; });
-
 }
 
 d3.selectAll("path.hull")
@@ -300,8 +292,8 @@ function siteClick(d,i) {
   var modalContents = d3.select("#sitemodal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
   
   modalContents.append("p").html(d.label)
-    modalContents.append("p").attr("id","showLabelButton").style("display","none").html("<button onclick='siteLabel(\"site_g_"+d.id+"\")'>Label</button>")
-    modalContents.append("p").attr("id","hideLabelButton").style("display","none").html("<button onclick='removeSiteLabel(\"site_g_"+d.id+"\")'>Remove Label</button>")
+    modalContents.append("p").attr("id","showLabelButton").style("display","none").html("<button onclick='siteLabel(\"site_g_"+d.id+"\")'>Display Site Label</button>")
+    modalContents.append("p").attr("id","hideLabelButton").style("display","none").html("<button onclick='removeSiteLabel(\"site_g_"+d.id+"\")'>Remove Site Label</button>")
 
   if (d3.select("#site_g_"+d.id).selectAll("text").empty()) {
     d3.select("#showLabelButton").style("display","block")
@@ -309,7 +301,7 @@ function siteClick(d,i) {
   else {
     d3.select("#hideLabelButton").style("display","block")
   }
-  modalContents.append("p").html("<button>Remove</button>").on("click", function() {onOffSite(d)})
+  modalContents.append("p").html("<button>Exclude Site</button>").on("click", function() {onOffSite(d)})
   modalContents.append("p").html("<button onclick='d3.select(this).remove();cartogram("+d.x+","+d.y+","+d.id+")'>Cartogram</button>")
   var costList = modalContents.append("ol")
   costList.selectAll("li").data(d.cost).enter().append("li").html(function(p) {return p});
@@ -405,7 +397,7 @@ function cartogram(centerX,centerY,centerID) {
   max = d3.max(cartoData, function(p) {return parseFloat(p["cost"])});
   mid = max / 2;
 
-  var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","green","yellow","red"]);
+  var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
   var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
 
   for (x in exposedsites) {
@@ -512,7 +504,9 @@ function getSettings() {
 
   var sourceID = document.getElementById("sourceSelectButton").value;
   var targetID = document.getElementById("targetSelectButton").value;
-  var monthID = document.getElementById("monthSelectButton").value;
+  var monthID = d3.selectAll("#monthPicker > input").filter(function() {return d3.select(this).property("checked") ? this : null}).attr("value");
+  
+  console.log(monthID)
   
   var priority = 0;
   var modeList = '';
@@ -578,7 +572,7 @@ function populateRouteDialogue(inSource,inTarget,inRouteID) {
 
   d3.selectAll(".results").style("stroke", function(d) {return d.properties.routeID == inRouteID ? "white" : "gray"})
   
-  var routeModalContents = d3.select("#routemodal").style("display", "block").style("left", "40px").style("top", "200px").html('')
+  var routeModalContents = d3.select("#routeResults").style("display", "block").style("padding", "0").style("width", "0px").html('')
   var segmentNumber = routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}).length;
   var durationSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentduration})
   var lengthSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentlength})
@@ -593,6 +587,8 @@ function populateRouteDialogue(inSource,inTarget,inRouteID) {
   routeModalContents.append("p").html(" * " + d3.round(expDSum,3) + " by donkey")
   routeModalContents.append("p").html(" * " + d3.round(expWSum,3) + " by wagon")
   routeModalContents.append("p").html("" + d3.round(expCSum,3) + " per passenger")
+  
+  routeModalContents.transition().duration(750).style("padding", "0 20px").style("width", "400px")
 }
 
 function onOffSite(d) {
@@ -732,4 +728,12 @@ function drawBorders() {
     .style("pointer-events", "none")
     .attr("d", groupPath)
     .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
+}
+
+function closeTimelineTray() {
+  var toLeft = document.body.clientWidth - 40;
+  if (parseInt(d3.select("#timelineViz").style("left")) < -100) {
+    toLeft = 0;
+  }
+  d3.select("#timelineViz").transition().duration(500).style("left", (-toLeft) + "px")
 }
