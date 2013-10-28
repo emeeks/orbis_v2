@@ -81,6 +81,7 @@ d3.csv("sites.csv", function(error, sites) {
       //Make this attribute an array to hold all the costs you've run
       exposedsites[x].cost = [];
       exposedsites[x].nearestCluster = 0;
+      exposedsites[x].betweenness = 0;
       siteHash[exposedsites[x].id] = exposedsites[x].label;
     }
   }
@@ -257,11 +258,11 @@ d3.select("#sitesG")
     .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
   
 d3.selectAll(".sitecirc")
-    .attr("r", 30 / zoom.scale());
+    .attr("r", function(d) {return ((d.betweenness * 4) + 30) / zoom.scale()});
 
 d3.selectAll(".sitecirctop")
   .attr("id", function(d,i) {return "sct" + d.id})
-  .attr("r", 25 / zoom.scale())
+  .attr("r", function(d) {return ((d.betweenness * 4) + 25) / zoom.scale()})
   .attr("cx", -2 / zoom.scale())
   .attr("cy", -2 / zoom.scale());
 
@@ -468,6 +469,7 @@ function cartogramOff() {
 function calculateRoute() {
   var newSettings = getSettings();
   routesRun.splice(0,0,newSettings)
+    console.log("new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded)
   d3.json(routeQuery, function(error,routeData) {
     exposedNewData = routeData;
     // Each segment needs to be tagged with the current route id so that later we can pull them out to measure them and show them
@@ -496,7 +498,19 @@ function calculateRoute() {
     .on("click", routeClick)
 
     zoomed();
-    populateRouteDialogue(newSettings.source,newSettings.target,currentRoute - 1);  
+    populateRouteDialogue(newSettings.source,newSettings.target,currentRoute - 1);
+    for (x in exposedsites) {
+      exposedsites[x].betweenness = 0;
+    }
+    for (x in exposedsites) {
+      for (y in routeSegments) {
+	var realSource = routeSegments[y].properties.source.toString().length == 6 ? routeSegments[y].properties.source.toString().substring(1,6) : routeSegments[y].properties.source;
+	var realTarget = routeSegments[y].properties.target.toString().length == 6 ? routeSegments[y].properties.target.toString().substring(1,6) : routeSegments[y].properties.target;
+	if (exposedsites[x].id == realSource || exposedsites[x].id == realTarget) {
+	  exposedsites[x].betweenness++;
+	}
+      }
+    }
   })
 }
 
@@ -736,4 +750,8 @@ function closeTimelineTray() {
     toLeft = 0;
   }
   d3.select("#timelineViz").transition().duration(500).style("left", (-toLeft) + "px")
+}
+
+function fullscreenMap() {
+  d3.selectAll(".controlsDiv").style("display", "none")
 }
