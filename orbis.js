@@ -165,6 +165,10 @@ siteLabel("site_g_"+initialLabels[x]);
 });
 
 function startUp() {
+  
+  orbisTutorial = new tut;
+  tutorial(1);
+  
     d3.select("#sourceSelectButton").selectAll("option")
   .data(exposedsites.filter(function (el) {return el.label != "x"}))
   .enter()
@@ -199,6 +203,9 @@ function startUp() {
   .html(function(d) {return d.l})
   .attr("value", function(d,i) {return d.v})
   
+  document.getElementById("targetSelectButton").value = 50327;
+  document.getElementById("sourceSelectButton").value = 50235;
+
 }
 
 function zoomComplete() {
@@ -302,7 +309,7 @@ function siteClick(d,i) {
   else {
     d3.select("#hideLabelButton").style("display","block")
   }
-  modalContents.append("p").html("<button>Exclude Site</button>").on("click", function() {onOffSite(d)})
+  modalContents.append("p").html("<button id='incExcButton'>" + (excludedSites.indexOf(d.id) > -1 ? "Include" : "Exclude") + "</button>").on("click", function() {onOffSite(d)})
   modalContents.append("p").html("<button onclick='d3.select(this).remove();cartogram("+d.x+","+d.y+","+d.id+")'>Cartogram</button>")
   var costList = modalContents.append("ol")
   costList.selectAll("li").data(d.cost).enter().append("li").html(function(p) {return p});
@@ -606,13 +613,21 @@ function populateRouteDialogue(inSource,inTarget,inRouteID) {
 }
 
 function onOffSite(d) {
-  d3.select("#sct" + d.id).style("opacity", .5)
-  excludedSites.push("" +d.id+ "")
-  //We also need to exclude the meta nodes that act as transfer points
-  excludedSites.push("1" +d.id+ "")
-  excludedSites.push("2" +d.id+ "")
-  excludedSites.push("3" +d.id+ "")
-  excludedSites.push("4" +d.id+ "")
+  if (excludedSites.indexOf(d.id) > -1) {
+    d3.select("#sct" + d.id).style("opacity", 1)
+    excludedSites = excludedSites.filter(function (el) {return el != d.id && el != "1" +d.id+ "" && el != "2" +d.id+ "" && el != "3" +d.id+ "" && el != "4" +d.id+ ""})
+    d3.select("#incExcButton").html("Exclude")
+  }
+  else {
+    d3.select("#sct" + d.id).style("opacity", .5)
+    excludedSites.push("" +d.id+ "")
+    //We also need to exclude the meta nodes that act as transfer points
+    excludedSites.push("1" +d.id+ "")
+    excludedSites.push("2" +d.id+ "")
+    excludedSites.push("3" +d.id+ "")
+    excludedSites.push("4" +d.id+ "")
+    d3.select("#incExcButton").html("Include")
+  }
 }
 
 function clusterSitesUI() {  
@@ -754,4 +769,149 @@ function closeTimelineTray() {
 
 function fullscreenMap() {
   d3.selectAll(".controlsDiv").style("display", "none")
+}
+
+function tutorial(step) {
+  var leftVal = "", rightVal = "", topVal = "", arrowVal = "", nextStep = "";
+  switch(step) {
+    case 1:
+      topVal = "137px";
+      leftVal = "10px";
+      rightVal = "";
+      arrowVal = "20px";
+      nextStep = "Selecting a Month"
+      newContent = "<p>To calculate a route, select a source and destination for your route.</p><p>For example, here's a <a href='#' onclick ='orbisTutorial.randomSourceTarget()'>random pair of sites.</a></p>"
+    break;
+    case 2:
+      topVal = "250px";
+      leftVal = "10px";
+      rightVal = "";
+      arrowVal = "20px";
+      nextStep = "Setting a Priority"
+      newContent = "<p>Route cost and availability can change depending on time of year. Sea routes adjust or are unavailable due to changing wind patterns and high altitude roads can be inaccessible during the winter.</p><p>For example, here's a <a href='#' onclick ='orbisTutorial.randomMonth()'>random month.</a></p>"
+    break;
+    case 3:
+      topVal = "300px";
+      leftVal = "10px";
+      rightVal = "";
+      arrowVal = "20px";
+      nextStep = "Selecting Modes";
+      newContent = "<p>There are three possible priorities to determine the least cost path. <ul><li>'Fastest' bases the calculation off the amount of time travel takes.</li><li>'Cheapest' routes are calculated based on cost to ship grain or a passenger.</li><li>Shortests routes are determined solely on the length of the routes.</li></p>";
+    break;
+    case 4:
+      topVal = "370px";
+      leftVal = "10px";
+      rightVal = "";
+      arrowVal = "20px";
+      nextStep = "Changing Maritime Options"
+      newContent = "<p>You can activate and deactivate different modes of travel by clicking these buttons to customize your route further. Some sites are inaccessible with certain modes turned off, such as islands with sea routes turned off.</p>"
+    break;
+    case 5:
+      topVal = "415px";
+      leftVal = "10px";
+      rightVal = "";
+      arrowVal = "20px";
+      nextStep = "Selecting Vehicle Type"
+      newContent = "<p>Rivers and sea routes are modeled in ORBIS using two different sets of assumptions for each type. For rivers, there is a 'Civilian' and 'Military' option, and the latter affords greater upstream speed to simulate rowing. For sea routes, there are two different modeled ships, a faster and a slower one, that have different speeds and slightly different paths.</p>"
+    break;
+    case 6:
+      topVal = "475px";
+      leftVal = "10px";
+      rightVal = "";
+      arrowVal = "20px";
+      nextStep = "Transfer Cost"
+      newContent = "<p>Your method of travel is going to affect speed (based entirely on the listed rate of km/day) and price to ship grain (by cart or by donkey/porter) or the price to transport a passenger (by carriage).</p><p>You can see dramatic differences in paths, cost, and travel time by varying the method of travel.</p>"
+    break;
+    case 7:
+      topVal = "500px";
+      leftVal = "10px";
+      rightVal = "";
+      arrowVal = "92px";
+      nextStep = "Advanced Options"
+      newContent = "<p>Transfer cost is the number of days it takes to switch from one mode to another, so a cost of 0.5 would add half a day to any change from road to river or sea route to road and so on. This friction can also dramatically change routes if high enough.</p>"
+    break;
+    case 8:
+      topVal = "525px";
+      leftVal = "10px";
+      rightVal = "";
+      arrowVal = "140px";
+      nextStep = "Calculate Route"
+      newContent = "<p>Advanced options are currently not supported, but will allow you to set all the values explicitly, such as setting a speed of 27km/day or a cost of 2d/100km of road.</p>"
+    break;
+    case 9:
+      topVal = "565px";
+      leftVal = "10px";
+      rightVal = "";
+      arrowVal = "40px";
+      nextStep = "Examining the Network"
+      newContent = "<p>Click here to see your route on the map.</p>"
+    break;
+    case 10:
+      topVal = "415px";
+      leftVal = "";
+      rightVal = "10px";
+      arrowVal = "240px";
+      nextStep = "Site Options"
+      newContent = "<p>ORBIS is based on a network model that simulates travel as a set of network connections between sites with varying length, economic cost, and duration. All route-finding websites do this, but it's particularly important to show the model underpinning a scholarly work like this. You can see the different types of routes available and their spectrum of expense and duration by clicking the buttons above.</p>"
+    break;
+    case 11:
+      topVal = "60%";
+      leftVal = "40%";
+      rightVal = "";
+      arrowVal = "45%";
+      nextStep = "Exclude/Include Site"
+      newContent = "<p>Clicking on any site (the red circles on the map) will provide you with options for adjusting the model, labeling sites, or running cartograms.</p>"
+    break;
+    case 12:
+      topVal = "60%";
+      leftVal = "40%";
+      rightVal = "";
+      arrowVal = "45%";
+      nextStep = "Calculate Cartogram"
+      newContent = "<p>Clicking 'Exclude Site' will make this site and any connections to it be ignored when calculating routes and cartograms. You cannot currently include the site back into the model.</p>"
+    break;
+    case 13:
+      topVal = "60%";
+      leftVal = "40%";
+      rightVal = "";
+      arrowVal = "45%";
+      nextStep = "Recently Run Routes"
+      newContent = "<p>Calculating a cartogram distorts the geography of the Roman World from the site selected, so that distance is based on the expense or time taken to travel from that point to any other point modeled in ORBIS. If you click on sites after running a cartogram, you can see the cost (in time, money, or distance) of each site based on the cartograms you've run. You can reset the distorted map to traditional geographic representation by clicking 'Reset Map'.</p><p>After running cartograms, you can 'Cluster' sites to see which are closer to each center of each cartogram. Once you've clustered them, you can click 'Borders' to draw a polygon around these clusters.</p>"
+    break;
+    case 13:
+      topVal = "165px";
+      leftVal = "";
+      rightVal = "10px";
+      arrowVal = "240px";
+      nextStep = "Recently Run Cartograms"
+      newContent = "<p>Clicking this button will show you a table of the routes that you've calculated. This is not currently implemented.</p>"
+    break;
+    case 14:
+      topVal = "165px";
+      leftVal = "";
+      rightVal = "10px";
+      arrowVal = "180px";
+      nextStep = "End the Tutorial"
+      newContent = "<p>Clicking this button will show you a table of the cartograms that you've calculated. This is not currently implemented.</p>"
+    break;
+    case 15:
+      d3.select("tutorialpopup").style("display", "none");
+      return;
+    break;
+    
+    
+  }
+  
+  newContent += "<p>Close this tutorial by clicking X or go on to <a href='#' onclick='tutorial("+(step+1)+")'>"+nextStep+"</a></p>";
+  
+  d3.select("#tutorialpopup").style("top", topVal).style("left", leftVal).style("right", rightVal)
+  d3.select("#tutorialarrow").style("left", arrowVal)
+  d3.select("#tutorialcontent").html(newContent)
+
+}
+
+tut = function() {
+  this.randomSourceTarget = function randomSourceTarget() {
+    console.log("randomSourceTarget");
+  }
 }
