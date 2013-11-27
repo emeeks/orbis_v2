@@ -46,14 +46,16 @@ var raster = svg.append("g");
 
 colorRamp=d3.scale.linear().domain([0,1,5,10]).range(["#004e99","#7e8fc3","#c28711","#ad5041"])
 
-d3.json("july_topo.json", function(error, routes) {
+d3.json("routes_topo.json", function(error, routes) {
+  
   exposedroutes = routes;
+
   svg.call(zoom);
   
   var routeG = svg.append("g").attr("id", "routesContainer")
 
   routeG.selectAll(".routes")
-  .data(topojson.object(routes, routes.objects.july2).geometries)
+  .data(topojson.object(routes, routes.objects.new_routes).geometries)
   .enter()
   .append("path")
   .attr("class", "routes")
@@ -70,7 +72,6 @@ d3.json("july_topo.json", function(error, routes) {
 
   refreshTimer = setTimeout('zoomComplete()', 100);
 
-
 d3.csv("sites.csv", function(error, sites) {
   exposedsites = sites;
   siteHash = {};
@@ -82,9 +83,25 @@ d3.csv("sites.csv", function(error, sites) {
       exposedsites[x].cost = [];
       exposedsites[x].nearestCluster = 0;
       exposedsites[x].betweenness = 0;
-      siteHash[exposedsites[x].id] = exposedsites[x].label;
+      siteHash[exposedsites[x].id] = exposedsites[x];
     }
   }
+  
+    exposedroutes.objects.new_routes.geometries.forEach(function(el) {
+
+      //Adjust for metanodes
+      if (el.properties.t == "road") {
+	var oldS = el.properties.sid;
+	el.properties.sid = el.properties.tid;
+	el.properties.tid = oldS;
+      }
+      var realSource = el.properties.sid.toString().length == 6 ? el.properties.sid.toString().substring(1,6) : el.properties.sid;
+      var realTarget = el.properties.tid.toString().length == 6 ? el.properties.tid.toString().substring(1,6) : el.properties.tid;
+      
+      el.properties.source = siteHash[realSource];
+      el.properties.target = siteHash[realTarget];
+    })
+
   exposedsites.sort(function(a,b) {
     if (a.label > b.label)
     return 1;
@@ -225,7 +242,7 @@ function zoomComplete() {
 }
 
 function zoomed() {
-  d3.selectAll(".routes").style("display", "none")
+//  d3.selectAll(".routes").style("display", "none")
   d3.selectAll(".results").style("display", "none")
   d3.selectAll(".modal").style("display", "none");
   d3.selectAll(".results").style("stroke", function(d) {return typeHash[d.properties.segment_type]})
@@ -278,6 +295,11 @@ d3.selectAll(".slabel")
   .attr("y", -60 / zoom.scale())
   .attr("font-size", 100 / zoom.scale())
   .style("stroke-width", 25 / zoom.scale());
+  
+    d3.selectAll(".routes")
+      .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
+      .style("stroke-width", 2 / zoom.scale());
+
 }
 
 function colorBy(attribute) {
@@ -389,6 +411,7 @@ function aquaticOptions(button) {
 }
 
 function cartogram(centerX,centerY,centerID) {
+d3.selectAll(".routes").filter(function(el) {return el.properties.source == undefined || el.properties.target == undefined ? this : null}).remove();
 
   d3.select("#sitemodal").style("display", "none");
   d3.select("#hullButton").style("display","none");
@@ -398,7 +421,9 @@ function cartogram(centerX,centerY,centerID) {
   var newSettings = getSettings();
   newSettings["centerID"] = centerID;
   cartogramsRun.splice(0,0,newSettings)
-  console.log("new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded)
+  
+//  cartoQuery = "new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
+
   d3.csv(cartoQuery, function(error,cartoData) {
 
   exposedCarto = cartoData;
@@ -421,17 +446,40 @@ function cartogram(centerX,centerY,centerID) {
   
   svg.selectAll("g.site")
   .transition()
+  .delay(700)
   .duration(3000)
   .attr("transform", function(d) {return "translate("+ (mainXRamp(findx(d["cost"][0],d.x,d.y,centerX,centerY))) + "," + (mainYRamp(findy(d["cost"][0],d.x,d.y,centerX,centerY))) + ")scale(.159)";});
 
   svg.selectAll(".sitecirctop")
   .transition()
+  .delay(500)
   .duration(3000)
   .style("fill", function(d) { return (colorramp(d["cost"][0]))});
-
   
   d3.selectAll("image").style("display", "none");
-  d3.selectAll("path").style("display", "none");
+//  d3.selectAll("path").style("display", "none");
+  d3.selectAll("path").each(function(d) {
+    var xposition = -1;
+    var yposition = -1;
+  var lineLength = d.coordinates.length - 1;
+  var cartoRamp = d3.scale.linear().range([d.properties.source["cost"][0],d.properties.target["cost"][0]]).domain([0, lineLength]);
+  cartoPath =
+  d3.svg.line()
+  .x(function(p) {return lineInterpolatorX(p)})
+  .y(function(p) {return lineInterpolatorY(p)});
+  
+  function lineInterpolatorX (incomingRoute) {
+    xposition++;return mainXRamp(findx(cartoRamp(xposition),incomingRoute[0],incomingRoute[1],centerX,centerY))
+  }
+
+  function lineInterpolatorY (incomingRoute) {
+    yposition++;return mainYRamp(findy(cartoRamp(yposition),incomingRoute[0],incomingRoute[1],centerX,centerY))
+  }
+  
+  d3.select(this).transition().delay(500).duration(3000).attr("d", cartoPath(d.coordinates));
+
+    
+  })
   
   })
   function findx(costin, thisx, thisy, cenx, ceny)
@@ -470,13 +518,18 @@ function cartogramOff() {
   .transition()
   .duration(3000)
   .attr("transform", function(d) {return "translate(" + projection([d.x,d.y]) + ")scale(" + projection.scale() + ")"})
+  
+  d3.selectAll(".routes").transition().duration(3000).attr("d", path)
+
   zoomed();
 }
 
 function calculateRoute() {
   var newSettings = getSettings();
   routesRun.splice(0,0,newSettings)
-    console.log("new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded)
+
+//  routeQuery = "new_route.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&s="+newSettings.source+"&t="+newSettings.target+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
+
   d3.json(routeQuery, function(error,routeData) {
     exposedNewData = routeData;
     // Each segment needs to be tagged with the current route id so that later we can pull them out to measure them and show them
@@ -526,8 +579,6 @@ function getSettings() {
   var sourceID = document.getElementById("sourceSelectButton").value;
   var targetID = document.getElementById("targetSelectButton").value;
   var monthID = d3.selectAll("#monthPicker > input").filter(function() {return d3.select(this).property("checked") ? this : null}).attr("value");
-  
-  console.log(monthID)
   
   var priority = 0;
   var modeList = '';
@@ -582,7 +633,7 @@ function routeClick(d,i) {
 function idToLabel(inID) {
   //Trim the meta-nodes such that they have the IDs of their parent nodes
   //We can do this easily because metanodes are 1 character longer than normal nodes
-  return siteHash[parseInt(inID.toString().length == 6 ? inID.toString().substring(1,6) : inID)];
+  return siteHash[parseInt(inID.toString().length == 6 ? inID.toString().substring(1,6) : inID)].label;
   
 }
 
@@ -780,7 +831,7 @@ function tutorial(step) {
       rightVal = "";
       arrowVal = "20px";
       nextStep = "Selecting a Month"
-      newContent = "<p>To calculate a route, select a source and destination for your route.</p><p>For example, here's a <a href='#' onclick ='orbisTutorial.randomSourceTarget()'>random pair of sites.</a></p>"
+      newContent = "<p>To calculate a route, select a source and destination for your route.</p>"
     break;
     case 2:
       topVal = "250px";
@@ -788,7 +839,7 @@ function tutorial(step) {
       rightVal = "";
       arrowVal = "20px";
       nextStep = "Setting a Priority"
-      newContent = "<p>Route cost and availability can change depending on time of year. Sea routes adjust or are unavailable due to changing wind patterns and high altitude roads can be inaccessible during the winter.</p><p>For example, here's a <a href='#' onclick ='orbisTutorial.randomMonth()'>random month.</a></p>"
+      newContent = "<p>Route cost and availability can change depending on time of year. Sea routes adjust or are unavailable due to changing wind patterns and high altitude roads can be inaccessible during the winter.</p>"
     break;
     case 3:
       topVal = "300px";
@@ -796,7 +847,7 @@ function tutorial(step) {
       rightVal = "";
       arrowVal = "20px";
       nextStep = "Selecting Modes";
-      newContent = "<p>There are three possible priorities to determine the least cost path. <ul><li>'Fastest' bases the calculation off the amount of time travel takes.</li><li>'Cheapest' routes are calculated based on cost to ship grain or a passenger.</li><li>Shortests routes are determined solely on the length of the routes.</li></p>";
+      newContent = "<p>There are three possible priorities to determine the least cost path. <ul><li>'Fastest' bases the calculation off the amount of time travel takes.</li><li>'Cheapest' routes are calculated based on cost to ship grain or a passenger.</li><li>'Shortest' routes are determined solely on the length of the routes.</li></ul></p>";
     break;
     case 4:
       topVal = "370px";
@@ -868,10 +919,10 @@ function tutorial(step) {
       rightVal = "";
       arrowVal = "45%";
       nextStep = "Calculate Cartogram"
-      newContent = "<p>Clicking 'Exclude Site' will make this site and any connections to it be ignored when calculating routes and cartograms. You cannot currently include the site back into the model.</p>"
+      newContent = "<p>Clicking 'Exclude' will make this site and any connections to it be ignored when calculating routes and cartograms. Clicking 'Include' will restore the site's availability to the model.</p>"
     break;
     case 13:
-      topVal = "60%";
+      topVal = "20%";
       leftVal = "40%";
       rightVal = "";
       arrowVal = "45%";
@@ -902,8 +953,7 @@ function tutorial(step) {
     
   }
   
-  newContent += "<p>Close this tutorial by clicking X or go on to <a href='#' onclick='tutorial("+(step+1)+")'>"+nextStep+"</a></p>";
-  
+  newContent += "<p>Close this tutorial by clicking X or go on to <a href='#' onclick='tutorial("+(step+1)+")'>"+nextStep+"</a></p>";  
   d3.select("#tutorialpopup").style("top", topVal).style("left", leftVal).style("right", rightVal)
   d3.select("#tutorialarrow").style("left", arrowVal)
   d3.select("#tutorialcontent").html(newContent)
