@@ -58,7 +58,7 @@ d3.json("routes_topo.json", function(error, routes) {
   .data(topojson.object(routes, routes.objects.new_routes).geometries)
   .enter()
   .append("path")
-  .attr("class", "routes")
+  .attr("class", "routes links")
   .attr("d", path)
   .style("stroke-width", 2)
   .style("stroke-opacity", .75)
@@ -227,10 +227,6 @@ function startUp() {
 
 function zoomComplete() {
   
-   if (cartogramRunning == true) {
-    return;
-   }
-  d3.selectAll(".routes").style("display", "block")
   d3.selectAll(".results").style("display", "block")
   d3.selectAll(".routes")
       .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
@@ -283,6 +279,9 @@ d3.select("#sitesG")
   
 d3.selectAll(".sitecirc")
     .attr("r", function(d) {return ((d.betweenness * 4) + 30) / zoom.scale()});
+
+  d3.selectAll("circle.legendRing")
+    .style("stroke-width", (4 / zoom.scale()) + "px");
 
 d3.selectAll(".sitecirctop")
   .attr("id", function(d,i) {return "sct" + d.id})
@@ -411,6 +410,9 @@ function aquaticOptions(button) {
 }
 
 function cartogram(centerX,centerY,centerID) {
+  
+d3.selectAll("g.legendRing").remove();
+
 d3.selectAll(".routes").filter(function(el) {return el.properties.source == undefined || el.properties.target == undefined ? this : null}).remove();
 
   d3.select("#sitemodal").style("display", "none");
@@ -445,20 +447,14 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   }
   
   svg.selectAll("g.site")
-  .transition()
-  .delay(700)
-  .duration(3000)
-  .attr("transform", function(d) {return "translate("+ (mainXRamp(findx(d["cost"][0],d.x,d.y,centerX,centerY))) + "," + (mainYRamp(findy(d["cost"][0],d.x,d.y,centerX,centerY))) + ")scale(.159)";});
+  .each(function(d) {
+    d.cartoTranslate = "translate("+ (mainXRamp(findx(d["cost"][0],d.x,d.y,centerX,centerY))) + "," + (mainYRamp(findy(d["cost"][0],d.x,d.y,centerX,centerY))) + ")scale(.159)";
+  })
 
-  svg.selectAll(".sitecirctop")
-  .transition()
-  .delay(500)
-  .duration(3000)
-  .style("fill", function(d) { return (colorramp(d["cost"][0]))});
   
   d3.selectAll("image").style("display", "none");
 //  d3.selectAll("path").style("display", "none");
-  d3.selectAll("path").each(function(d) {
+  d3.selectAll("path.links").each(function(d) {
     var xposition = -1;
     var yposition = -1;
   var lineLength = d.coordinates.length - 1;
@@ -475,11 +471,75 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   function lineInterpolatorY (incomingRoute) {
     yposition++;return mainYRamp(findy(cartoRamp(yposition),incomingRoute[0],incomingRoute[1],centerX,centerY))
   }
-  
-  d3.select(this).transition().delay(500).duration(3000).attr("d", cartoPath(d.coordinates));
+  d.cartoD = cartoPath(d.coordinates);
 
     
   })
+  
+  
+    svg.selectAll("g.site")
+  .transition()
+  .duration(3000)
+  .attr("transform", function(d) {return d.cartoTranslate;});
+
+  svg.selectAll(".sitecirctop")
+  .transition()
+  .duration(3000)
+  .style("fill", function(d) { return (colorramp(d["cost"][0]))});
+  
+  d3.selectAll(".links").transition().duration(3000).attr("d", function(d) {return (d.cartoD ? d.cartoD : "")})
+
+  sortedSites = exposedsites.sort(function (a,b) {
+    if (parseFloat(a["cost"][0]) < parseFloat(b["cost"][0]))
+    return -1;
+    if (parseFloat(a["cost"][0]) > parseFloat(b["cost"][0]))
+    return 1;
+    return 0;
+    });
+  
+  var centerTransform = d3.transform(exposedsites.filter(function(el) {return el.id == centerID})[0].cartoTranslate).translate;
+  var transform1 = d3.transform(sortedSites[Math.floor(sortedSites.length / 4)].cartoTranslate).translate;
+  var transform2 = d3.transform(sortedSites[Math.floor(sortedSites.length / 2)].cartoTranslate).translate;
+  var transform3 = d3.transform(sortedSites[Math.floor(sortedSites.length * .75)].cartoTranslate).translate;
+  var transform3 = d3.transform(sortedSites[Math.floor(sortedSites.length * .90)].cartoTranslate).translate;
+  var transform4 = d3.transform(sortedSites[Math.floor(sortedSites.length - 1)].cartoTranslate).translate;
+  
+  legendRingData = [distance(centerTransform, transform1)];
+  legendRingData.push(distance(centerTransform, transform2))
+  legendRingData.push(distance(centerTransform, transform3))
+  legendRingData.push(distance(centerTransform, transform4))
+  
+  function distance( p1, p2 )
+{
+  var xs = 0;
+  var ys = 0;
+ 
+  xs = p2[0] - p1[0];
+  xs = xs * xs;
+ 
+  ys = p2[1] - p1[1];
+  ys = ys * ys;
+ 
+  return Math.sqrt( xs + ys );
+}
+
+
+  d3.select("#sitesG").insert("g", "g").attr("class", "legendRing")
+  .attr("transform", function() {return exposedsites.filter(function(el) {return el.id == centerID})[0].cartoTranslate;})
+//  .attr("transform", function() {return exposedsites.filter(function(el) {return el.id == centerID}).cartoTranslate;})
+  .selectAll("circle.legendRing")
+  .data(legendRingData)
+  .enter()
+  .append("circle")
+  .attr("r", function(d) {return d * 5})
+  .attr("class", "legendRing")
+  .style("fill", "none")
+  .style("stroke", "black")
+  .style("stroke-width", "0px")
+  .transition()
+  .duration(3000)
+  .style("stroke-width", (4 / zoom.scale()) + "px")
+
   
   })
   function findx(costin, thisx, thisy, cenx, ceny)
@@ -507,19 +567,22 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
     return (ratio * ydiff) + 480;
   }
 
+
 }
 
 function cartogramOff() {
+  d3.selectAll("g.legendRing").remove();
   d3.select("#sitemodal").style("display", "none");
   cartogramRunning = false;
   d3.selectAll("image").style("display", "block");
-  d3.selectAll("path").style("display", "block");
+  d3.selectAll("path")
+  .transition()
+  .duration(3000)
+  .attr("d", path)
   d3.selectAll("g.site")
   .transition()
   .duration(3000)
   .attr("transform", function(d) {return "translate(" + projection([d.x,d.y]) + ")scale(" + projection.scale() + ")"})
-  
-  d3.selectAll(".routes").transition().duration(3000).attr("d", path)
 
   zoomed();
 }
@@ -540,6 +603,14 @@ function calculateRoute() {
     }
     currentRoute++;
     for (x in routeData.features) {
+      	var realSource = routeData.features[x].properties.source.toString().length == 6 ? routeData.features[x].properties.source.toString().substring(1,6) : routeData.features[x].properties.source;
+	var realTarget = routeData.features[x].properties.target.toString().length == 6 ? routeData.features[x].properties.target.toString().substring(1,6) : routeData.features[x].properties.target;
+	
+      routeData.features[x].properties.source = siteHash[realSource];
+      routeData.features[x].properties.target = siteHash[realTarget];
+      routeData.features[x].geometry.source = siteHash[realSource];
+      routeData.features[x].geometry.target = siteHash[realTarget];
+      routeData.features[x].coordinates = routeData.features[x].geometry.coordinates;
       routeSegments.push(routeData.features[x])
     }
 
@@ -550,7 +621,7 @@ function calculateRoute() {
     .enter()
     .insert("path", "#sitesG")
     .attr("d", path)
-    .attr("class", "results")
+    .attr("class", "results links")
     .style("stroke", function(d) {return typeHash[d.properties.segment_type]})
     .style("stroke-width", 4)
     .style("opacity", .75)
@@ -564,9 +635,8 @@ function calculateRoute() {
     }
     for (x in exposedsites) {
       for (y in routeSegments) {
-	var realSource = routeSegments[y].properties.source.toString().length == 6 ? routeSegments[y].properties.source.toString().substring(1,6) : routeSegments[y].properties.source;
 	var realTarget = routeSegments[y].properties.target.toString().length == 6 ? routeSegments[y].properties.target.toString().substring(1,6) : routeSegments[y].properties.target;
-	if (exposedsites[x].id == realSource || exposedsites[x].id == realTarget) {
+	if (exposedsites[x].id == routeSegments[y].properties.source.id || exposedsites[x].id == routeSegments[y].properties.target.id) {
 	  exposedsites[x].betweenness++;
 	}
       }
@@ -619,7 +689,7 @@ function routeClick(d,i) {
   
   modalContents.append("div").attr("class", "routeArrowLeftUnder");
   modalContents.append("div").attr("class", "routeArrowLeft");
-  modalContents.append("p").html(d.properties.segment_type + " route from " + idToLabel(d.properties.source) + " to " + idToLabel(d.properties.target))
+  modalContents.append("p").html(d.properties.segment_type + " route from " + d.properties.source.label + " to " + d.properties.target.label)
   modalContents.append("p").html("Duration: " + d.properties.segmentduration);
   modalContents.append("p").html("Length: " + d.properties.segmentlength);
   modalContents.append("p").html("Expense (D): " + d.properties.segmentexpense_d);
@@ -962,6 +1032,5 @@ function tutorial(step) {
 
 tut = function() {
   this.randomSourceTarget = function randomSourceTarget() {
-    console.log("randomSourceTarget");
   }
 }
