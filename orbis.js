@@ -540,7 +540,7 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   .duration(3000)
   .style("stroke-width", (4 / zoom.scale()) + "px")
 
-  
+  canvasCart();
   })
   function findx(costin, thisx, thisy, cenx, ceny)
   {
@@ -1033,4 +1033,53 @@ function tutorial(step) {
 tut = function() {
   this.randomSourceTarget = function randomSourceTarget() {
   }
+}
+
+function canvasCart() {
+  canvas = d3.select("#canvasDiv").append("canvas")
+  .style("background", "white").style("border", "black 1px solid").attr("height", 300).attr("width", 300);
+  
+  var diameter = 500,
+    radius = diameter/2;
+ 
+var projection2 = d3.geo.orthographic()
+    .scale(300)
+    .translate([350, 500])
+    .rotate([-30,0,0]);
+    
+    var path2 = d3.geo.path()
+    .projection(projection2);
+  
+  var land = topojson.object(exposedroutes, exposedroutes.objects.new_routes)
+  context = canvas.node().getContext("2d");
+
+  /*
+  context.strokeStyle = 'blue';
+  context.fillStyle = 'none';
+  context.beginPath(), path2.context(context)(land), context.fill(), context.stroke();
+  
+  var drawRoutes = exposedroutes.objects.new_routes.geometries;
+  */
+  
+  var max = d3.max(exposedsites, function(p) {return parseFloat(p["cost"][0])});
+  var mid = max / 2;
+
+  var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
+  var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
+
+  
+  for (x in exposedsites) {
+    var siteCoords = d3.transform(exposedsites[x].cartoTranslate).translate;
+    siteCoords[0] = (siteCoords[0] * 1024) + 125;
+    siteCoords[1] = (siteCoords[1] * 1024) + 250;
+    
+    console.log(siteCoords)
+    context.strokeStyle = 'black';
+    context.fillStyle = colorramp(exposedsites[x].cost[0]);
+    context.beginPath();
+    context.arc(siteCoords[0],siteCoords[1],2,0,2*Math.PI);
+    context.fill();
+    
+  }
+  
 }
