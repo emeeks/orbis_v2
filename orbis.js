@@ -1066,7 +1066,6 @@ var projection2 = d3.geo.orthographic()
 
   var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
   var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
-
   
   for (x in exposedsites) {
     var siteCoords = d3.transform(exposedsites[x].cartoTranslate).translate;
