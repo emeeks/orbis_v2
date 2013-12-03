@@ -540,7 +540,8 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   .duration(3000)
   .style("stroke-width", (4 / zoom.scale()) + "px")
 
-  canvasCart();
+  addCartoRow(newSettings);
+
   })
   function findx(costin, thisx, thisy, cenx, ceny)
   {
@@ -641,6 +642,8 @@ function calculateRoute() {
 	}
       }
     }
+    
+    addRouteRow(newSettings, routeData)
   })
 }
 
@@ -652,33 +655,36 @@ function getSettings() {
   
   var priority = 0;
   var modeList = '';
+  var modeArray = []
   
   d3.select("#cPriority").classed("active") == true ? priority = 1 : null;
   d3.select("#sPriority").classed("active") == true ? priority = 2 : null;  
-  d3.select("#roadFlip").classed("active") == true ? modeList+='road' : null;
+  d3.select("#roadFlip").classed("active") == true ? modeArray.push('road') : null;
   
   if (d3.select("#riverFlip").classed("active") == true) {
-    document.getElementById("aquaticRiver").value == 'milriver' ? modeList+='fastupfastdown' : modeList += 'upstreamdownstream'
+    document.getElementById("aquaticRiver").value == 'milriver' ? modeArray.push('fastupfastdown') : modeArray.push('upstreamdownstream')
   }
   if (d3.select("#seaFlip").classed("active") == true) {
-    document.getElementById("aquaticSea").value == 'slowsea' ? modeList+='slowover' : modeList += 'overseas'
+    document.getElementById("aquaticSea").value == 'slowsea' ? modeArray.push('slowover') : modeArray.push('overseas')
   }
   if (d3.select("#coastFlip").classed("active") == true) {
-    document.getElementById("aquaticSea").value == 'slowsea' ? modeList+='slowcoast' : modeList += 'coastal'
+    document.getElementById("aquaticSea").value == 'slowsea' ? modeArray.push('slowcoast') : modeArray.push('coastal')
   }
   if (d3.select("#dayFlip").classed("active") == true) {
-    document.getElementById("aquaticSea").value == 'slowsea' ? modeList+='dayslow' : modeList += 'dayfast'
+    document.getElementById("aquaticSea").value == 'slowsea' ? modeArray.push('dayslow') : modeArray.push('dayfast')
   }
 
   var vehicleType = document.getElementById("vehicleSelectButton").value;
   var transferCost = parseFloat(document.getElementById("transferCost").value);
   isNaN(transferCost) ? transferCost = 0 : null;
   
-  modeList+="selfferrytransferctransferftransferotransferr";
+  modeArray.push("self","ferry","transferc","transferf","transfero","transferr");
 
+  modeList = modeArray.join("");
+  
   var excludedIDs = excludedSites.toString();
   
- return {modes: modeList, source: sourceID, target: targetID, month: monthID, priority: priority, vehicle: vehicleType, transfer: transferCost, excluded: excludedIDs}
+ return {modes: modeList, modeArr: modeArray, source: sourceID, target: targetID, month: monthID, priority: priority, vehicle: vehicleType, transfer: transferCost, excluded: excludedIDs}
   
 }
 
@@ -1035,22 +1041,21 @@ tut = function() {
   }
 }
 
-function canvasCart() {
-  canvas = d3.select("#canvasDiv").append("canvas")
-  .style("background", "white").style("border", "black 1px solid").attr("height", 300).attr("width", 300);
+function addCartoRow(cartoSettings) {
   
-  var diameter = 500,
-    radius = diameter/2;
- 
-var projection2 = d3.geo.orthographic()
-    .scale(300)
-    .translate([350, 500])
-    .rotate([-30,0,0]);
-    
-    var path2 = d3.geo.path()
-    .projection(projection2);
+  var newCartoRow = d3.select("#recentTable").append("div")
+  .style("background", "white")
+  .style("border", "1px lightgray solid")
+  .style("width", "500px")
+  .style("height", "180px")
+  .style("margin-bottom", "10px")
+  .style("padding", "10px")
+  .attr("class", "cartoRow resultsRow")
+
+  canvas = newCartoRow.append("canvas")
+  .style("background", "white").style("border", "black 1px solid").attr("height", 1000).attr("width", 1000)
+  .attr("id", "newCanvas");
   
-  var land = topojson.object(exposedroutes, exposedroutes.objects.new_routes)
   context = canvas.node().getContext("2d");
 
   /*
@@ -1067,18 +1072,113 @@ var projection2 = d3.geo.orthographic()
   var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
   var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
   
+  var sMaxA = d3.max(exposedsites, function (el) {return d3.transform(el.cartoTranslate).translate[0]});
+  var sMaxB = d3.max(exposedsites, function (el) {return d3.transform(el.cartoTranslate).translate[1]});
+  var sMinA = d3.min(exposedsites, function (el) {return d3.transform(el.cartoTranslate).translate[0]});
+  var sMinB = d3.min(exposedsites, function (el) {return d3.transform(el.cartoTranslate).translate[1]});
+  
+  context.beginPath();
+  context.rect(0, 0, 1000, 1000);
+  context.fillStyle = 'white';
+  context.fill();
+  context.lineWidth = 1;
+  context.strokeStyle = 'black';
+  context.stroke();
+
+  
   for (x in exposedsites) {
     var siteCoords = d3.transform(exposedsites[x].cartoTranslate).translate;
-    siteCoords[0] = (siteCoords[0] * 1024) + 125;
-    siteCoords[1] = (siteCoords[1] * 1024) + 250;
+    siteCoords[0] = (siteCoords[0] * 4096) + 450;
+    siteCoords[1] = (siteCoords[1] * 4096) + 1000;
     
-    console.log(siteCoords)
     context.strokeStyle = 'black';
     context.fillStyle = colorramp(exposedsites[x].cost[0]);
     context.beginPath();
-    context.arc(siteCoords[0],siteCoords[1],2,0,2*Math.PI);
+    context.arc(siteCoords[0],siteCoords[1],5,0,2*Math.PI);
     context.fill();
     
   }
   
+  var imgUrl = document.getElementById("newCanvas").toDataURL("image/png");
+  var detailsDiv = newCartoRow.append("div").style("float", "left").style("width", "175px");
+  detailsDiv.append("img").attr("src", imgUrl).style("width", "175px").style("height", "175px");
+  canvas.remove();
+  
+  formatSettings(cartoSettings, newCartoRow);
+
+}
+
+function addRouteRow(routeSettings, newRoute) {
+  
+  var newCartoRow = d3.select("#recentTable").append("div")
+  .style("background", "white")
+  .style("border", "1px lightgray solid")
+  .style("width", "500px")
+  .style("height", "180px")
+  .style("margin-bottom", "10px")
+  .style("padding", "10px")
+  .attr("class", "routeRow resultsRow")
+  
+  canvas = newCartoRow.append("canvas")
+  .style("background", "white").style("border", "black 1px solid").attr("height", 700).attr("width", 1000)
+  .attr("id", "newCanvas");
+    
+  var diameter = 500,
+    radius = diameter/2;
+ 
+var projection2 = d3.geo.orthographic()
+    .scale(1200)
+    .translate([700, 1100])
+    .rotate([-30,0,0]);
+    
+    var path2 = d3.geo.path()
+    .projection(projection2);
+  
+  var land = topojson.object(exposedroutes, exposedroutes.objects.new_routes)
+  context = canvas.node().getContext("2d");
+
+  context.beginPath();
+  context.rect(0, 0, 1000, 700);
+  context.fillStyle = 'white';
+  context.fill();
+  context.lineWidth = 1;
+  context.strokeStyle = 'black';
+  context.stroke();
+
+  context.strokeStyle = '#ad5041';
+  context.fillStyle = 'none';
+  context.beginPath(), path2.context(context)(land), context.fill(), context.stroke();
+  
+  var drawRoutes = exposedroutes.objects.new_routes.geometries;
+  
+  context.strokeStyle = '#7e8fc3';
+  context.lineWidth = 8;
+  context.fillStyle = 'none';
+  context.beginPath(), path2.context(context)(newRoute), context.fill(), context.stroke();
+  
+  var imgUrl = document.getElementById("newCanvas").toDataURL("image/png");
+  var detailsDiv = newCartoRow.append("div").style("float", "left").style("width", "175px");
+  detailsDiv.append("img").attr("src", imgUrl).style("width", "175px").style("height", "122px");
+  canvas.remove();
+  
+  formatSettings(routeSettings, newCartoRow);
+  d3.select("#figureTitle").attr("id", "")
+
+}
+
+function formatSettings(incSettings, targetSelection) {
+  exposedSettings = incSettings;
+  
+  var annotationDiv = targetSelection.append("div").style("overflow", "hidden").style("padding-left", "10px").style("width", "300px").style("float", "left");
+
+  annotationDiv.append("h3")
+  .html(incSettings.centerID ? siteHash[incSettings.centerID].label + " Cartogram" : siteHash[incSettings.source].label + " to " + siteHash[incSettings.target].label)
+  
+  annotationDiv.append("p").html("Priority: " + incSettings.priority
+    + ", Month: " + incSettings.month + ", vehicle: " + incSettings.vehicle + ", transfer cost: " +
+    incSettings.transfer + "modes: ");
+  
+//  var figureDiv = targetSelection.append("div").style("width", "500px").style("overflow", "hidden")
+//  figureDiv.append("p").html(JSON.stringify(incSettings))
+
 }

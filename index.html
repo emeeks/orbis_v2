@@ -29,11 +29,11 @@
     </div>
 
   </div>
-
     <div class="controlsDiv" style="position: fixed; top: 10%; right: 0px; height:100px; width: 200px; background: white;">
     <div class="buttonContainer" style="width: 180px;">
       <p>Recently Run</p>
-      <button>Routes</button><button>Cartograms</button>
+      <button onclick="d3.selectAll('#resultsTable').style('display', 'block');d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.routeRow').style('display','block');">Routes</button>
+      <button  onclick="d3.selectAll('#resultsTable').style('display', 'block');d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.cartoRow').style('display','block');">Cartograms</button>
       <p>You can also browse routes and cartograms run on ORBIS:</p>
       <button>Explore Routes and Cartograms</button>
       <p>Color the network by priority to get a sense of how the network changes based on priority.</p>
@@ -102,7 +102,17 @@
       <button class="controlButton" onclick="calculateRoute()">Calculate Route</button>
           <div id="routeResults" class="modal"></div>
     </div>
-    <div id="canvasDiv" style="position:absolute;left:250px;top:10%;height:90%;width:500px;display:none;overflow: auto;z-index: 99;"></div>
+    <div id="resultsTable" style="display:none;background:white;border:1px black solid;position:absolute;left:250px;top:10%;height:90%;width:540px;overflow: hidden;z-index: 99;">
+      <div>
+        <button onclick="d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.cartoRow').style('display','block')">Cartograms</button>
+        <button onclick="d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.routeRow').style('display','block')">Routes</button>
+        <button onclick="d3.selectAll('.resultsRow').style('display', 'block');">All</button>
+        <button onclick="d3.selectAll('#resultsTable').style('display', 'none');">CLOSE</button>
+      </div>
+      <div id="recentTable" style="overflow: auto;height:520px;border-top:1px lightgray solid;">
+        
+      </div>
+    </div>
   </div>
   <div id="timelineViz" style="display: none;"></div>
 
