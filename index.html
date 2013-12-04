@@ -104,13 +104,35 @@
     </div>
     <div id="resultsTable" style="display:none;background:white;border:1px black solid;position:absolute;left:250px;top:10%;height:90%;width:540px;overflow: hidden;z-index: 99;">
       <div>
-        <button onclick="d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.cartoRow').style('display','block')">Cartograms</button>
-        <button onclick="d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.routeRow').style('display','block')">Routes</button>
-        <button onclick="d3.selectAll('.resultsRow').style('display', 'block');">All</button>
+        <button onclick="d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.cartoRow').style('display','block');d3.selectAll('tr.cartoRow').style('display','table-row');">Cartograms</button>
+        <button onclick="d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.routeRow').style('display','block');d3.selectAll('tr.routeRow').style('display','table-row');">Routes</button>
+        <button onclick="d3.selectAll('.resultsRow').style('display', 'block');d3.selectAll('tr.resultsRow').style('display','table-row');">All</button>
+        <button onclick="d3.selectAll('.resultsContainer').style('display', 'none');d3.selectAll('#recentGrid').style('display', 'block');">Grid View</button>
+        <button onclick="d3.selectAll('.resultsContainer').style('display', 'none');d3.selectAll('#recentList').style('display', 'block');">List View</button>
+        <button onclick="d3.selectAll('.resultsContainer').style('display', 'none');d3.selectAll('#recentTable').style('display', 'block');">Table View</button>
         <button onclick="d3.selectAll('#resultsTable').style('display', 'none');">CLOSE</button>
       </div>
-      <div id="recentTable" style="overflow: auto;height:520px;border-top:1px lightgray solid;">
-        
+      <div id="recentList" class="resultsContainer" style="overflow: auto;height:520px;border-top:1px lightgray solid;">
+      </div>
+      <div id="recentGrid" class="resultsContainer" style="display:none;overflow: auto;height:520px;border-top:1px lightgray solid;">
+      </div>
+      <div id="recentTable" class="resultsContainer" style="display:none;overflow: auto;height:520px;border-top:1px lightgray solid;">
+        <table style="width:540px;">
+          <caption>Results</caption>
+          <thead>
+            <tr>
+              <th>Start</th>
+              <th>End</th>
+              <th>Priority</th>
+              <th>Month</th>
+              <th>Vehicle</th>
+              <th>Thumb</th>
+            </tr>
+            <tbody id="recTableActual">
+              
+            </tbody>
+          </thead>
+        </table>
       </div>
     </div>
   </div>

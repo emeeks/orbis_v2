@@ -1011,7 +1011,7 @@ function tutorial(step) {
       rightVal = "10px";
       arrowVal = "240px";
       nextStep = "Recently Run Cartograms"
-      newContent = "<p>Clicking this button will show you a table of the routes that you've calculated. This is not currently implemented.</p>"
+      newContent = "<p>Clicking this button will show you a table of the routes that you've calculated.</p>"
     break;
     case 14:
       topVal = "165px";
@@ -1019,7 +1019,7 @@ function tutorial(step) {
       rightVal = "10px";
       arrowVal = "180px";
       nextStep = "End the Tutorial"
-      newContent = "<p>Clicking this button will show you a table of the cartograms that you've calculated. This is not currently implemented.</p>"
+      newContent = "<p>Clicking this button will show you a table of the cartograms that you've calculated.</p>"
     break;
     case 15:
       d3.select("tutorialpopup").style("display", "none");
@@ -1043,13 +1043,24 @@ tut = function() {
 
 function addCartoRow(cartoSettings) {
   
-  var newCartoRow = d3.select("#recentTable").append("div")
+  var newCartoRow = d3.select("#recentList").append("div")
   .style("background", "white")
   .style("border", "1px lightgray solid")
   .style("width", "500px")
   .style("height", "180px")
   .style("margin-bottom", "10px")
   .style("padding", "10px")
+  .attr("class", "cartoRow resultsRow")
+
+  var newCartoGrid = d3.select("#recentGrid").append("div")
+  .style("background", "white")
+  .style("border", "1px lightgray solid")
+  .style("width", "140px")
+  .style("height", "140px")
+  .style("margin", "10px")
+  .style("padding", "5px")
+  .style("float", "left")
+  .style("position", "relative")
   .attr("class", "cartoRow resultsRow")
 
   canvas = newCartoRow.append("canvas")
@@ -1100,23 +1111,40 @@ function addCartoRow(cartoSettings) {
   }
   
   var imgUrl = document.getElementById("newCanvas").toDataURL("image/png");
-  var detailsDiv = newCartoRow.append("div").style("float", "left").style("width", "175px");
-  detailsDiv.append("img").attr("src", imgUrl).style("width", "175px").style("height", "175px");
+  var detailsDiv = newCartoRow.append("div").style("float", "left").style("width", "170px");
+  detailsDiv.append("img").attr("src", imgUrl).style("width", "170px").style("height", "170px");
+
+  var gridDiv = newCartoGrid.append("div").style("width", "170px");
+  gridDiv.append("img").attr("src", imgUrl).style("width", "140px").style("height", "140px");
+  newCartoGrid.append("span").style("position", "absolute").style("bottom", "10px")
+  .html(siteHash[cartoSettings.centerID].label)
+  
   canvas.remove();
   
-  formatSettings(cartoSettings, newCartoRow);
+  formatSettings(cartoSettings, newCartoRow, imgUrl);
 
 }
 
 function addRouteRow(routeSettings, newRoute) {
   
-  var newCartoRow = d3.select("#recentTable").append("div")
+  var newCartoRow = d3.select("#recentList").append("div")
   .style("background", "white")
   .style("border", "1px lightgray solid")
   .style("width", "500px")
   .style("height", "180px")
   .style("margin-bottom", "10px")
   .style("padding", "10px")
+  .attr("class", "routeRow resultsRow")
+
+  var newCartoGrid = d3.select("#recentGrid").append("div")
+  .style("background", "white")
+  .style("border", "1px lightgray solid")
+  .style("width", "140px")
+  .style("height", "140px")
+  .style("margin", "10px")
+  .style("padding", "5px")
+  .style("float", "left")
+  .style("position", "relative")
   .attr("class", "routeRow resultsRow")
   
   canvas = newCartoRow.append("canvas")
@@ -1157,16 +1185,21 @@ var projection2 = d3.geo.orthographic()
   context.beginPath(), path2.context(context)(newRoute), context.fill(), context.stroke();
   
   var imgUrl = document.getElementById("newCanvas").toDataURL("image/png");
-  var detailsDiv = newCartoRow.append("div").style("float", "left").style("width", "175px");
-  detailsDiv.append("img").attr("src", imgUrl).style("width", "175px").style("height", "122px");
+  var detailsDiv = newCartoRow.append("div").style("float", "left").style("width", "170px");
+  detailsDiv.append("img").attr("src", imgUrl).style("width", "170px").style("height", "120px");
+
+  var gridDiv = newCartoGrid.append("div").style("width", "140px");
+  gridDiv.append("img").attr("src", imgUrl).style("width", "140px").style("height", "100px");
+  newCartoGrid.append("span").style("position", "absolute").style("bottom", "10px")
+  .html(siteHash[routeSettings.source].label + " -> " + siteHash[routeSettings.target].label)
+    
   canvas.remove();
   
-  formatSettings(routeSettings, newCartoRow);
-  d3.select("#figureTitle").attr("id", "")
+  formatSettings(routeSettings, newCartoRow, imgUrl);
 
 }
 
-function formatSettings(incSettings, targetSelection) {
+function formatSettings(incSettings, targetSelection, imgUrl) {
   exposedSettings = incSettings;
   
   var annotationDiv = targetSelection.append("div").style("overflow", "hidden").style("padding-left", "10px").style("width", "300px").style("float", "left");
@@ -1177,6 +1210,25 @@ function formatSettings(incSettings, targetSelection) {
   annotationDiv.append("p").html("Priority: " + incSettings.priority
     + ", Month: " + incSettings.month + ", vehicle: " + incSettings.vehicle + ", transfer cost: " +
     incSettings.transfer + "modes: ");
+  
+  var newRow = d3.select("#recTableActual").append("tr").attr("class", incSettings.centerID ? "cartoRow resultsRow" : "routeRow resultsRow");
+    
+  newRow.append("td").html(siteHash[incSettings.source].label)
+  newRow.append("td").html(incSettings.centerID ? "Cartogram" : siteHash[incSettings.target].label)
+  newRow.append("td").html(incSettings.priority)
+  newRow.append("td").html(incSettings.month)
+  newRow.append("td").html(incSettings.vehicle)
+  newRow.append("td").append("div")
+  .style("width", "90px")
+  .style("height", "40px")
+  .style("overflow", "hidden")
+  .append("img").attr("src", imgUrl)
+  .style("position", "relative")
+  .style("left", "-20px")
+  .style("top", incSettings.centerID ? "-20px" : "-10px")
+  .style("width", "120px")
+  .style("height", incSettings.centerID ? "120px" : "80px")
+
   
 //  var figureDiv = targetSelection.append("div").style("width", "500px").style("overflow", "hidden")
 //  figureDiv.append("p").html(JSON.stringify(incSettings))
