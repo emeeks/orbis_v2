@@ -37,7 +37,7 @@
       <p>You can also browse routes and cartograms run on ORBIS:</p>
       <button>Explore Routes and Cartograms</button>
       <p>Color the network by priority to get a sense of how the network changes based on priority.</p>
-      <button id="eButton" class="routeLabelButton controlButton active" onclick="colorBy('e')">Expense</button> <button id="sButton" class="routeLabelButton controlButton" onclick="colorBy('s')">Speed</button> <button id="tButton" class="routeLabelButton controlButton" onclick="colorByType()">Type</button>
+      <button id="eButton" class="routeLabelButton controlButton" onclick="colorBy('e')">Expense</button> <button id="sButton" class="routeLabelButton controlButton" onclick="colorBy('s')">Speed</button> <button id="tButton" class="routeLabelButton controlButton active" onclick="colorByType()">Type</button>
       <p>You can restore the map view by turning off the cartogram.</p>
       <button class="controlButton" onclick="cartogramOff()">Reset Map</button>
       <p>Once you've run several cartograms of the same kind, you can cluster sites to see regions.</p>
@@ -85,8 +85,8 @@
     </div>
 
     <div class="buttonContainer" style="background:#F8F8F8;width:210px">
-      <button id="roadFlip" class="controlButton active" onclick="flipButton(this)">Road</button> <button id="riverFlip" class="controlButton active" onclick="flipButton(this)">River</button> <button id="coastFlip" class="controlButton active" onclick="flipButton(this)">Coastal Sea</button>
-      <button id="seaFlip" class="controlButton active" onclick="flipButton(this)">Open Sea</button> <button id="dayFlip" class="controlButton" onclick="flipButton(this)">Coastal (Daylight)</button>
+      <button id="roadFlip" class="controlButton active" onclick="flipButton(this);updateBGRoutes();">Road</button> <button id="riverFlip" class="controlButton active" onclick="flipButton(this);updateBGRoutes();">River</button> <button id="coastFlip" class="controlButton active" onclick="flipButton(this);updateBGRoutes();">Coastal Sea</button>
+      <button id="seaFlip" class="controlButton active" onclick="flipButton(this);updateBGRoutes();">Open Sea</button> <button id="dayFlip" class="controlButton" onclick="flipButton(this);updateBGRoutes();">Coastal (Daylight)</button>
     </div>
 
     <div class="buttonContainer">

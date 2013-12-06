@@ -8,7 +8,7 @@
   refreshSet = 0;
   currentRoute = 0;
 
-var typeHash = {road: "brown", overseas: "green", coastal: "lightgreen", upstream: "blue", downstream: "blue", ferry: "purple"}
+var typeHash = {road: "brown", overseas: "green", coastal: "#5CE68A", upstream: "blue", downstream: "blue", ferry: "purple"}
 
 var width = Math.max(1600),
     height = Math.max(1000);
@@ -47,7 +47,11 @@ var raster = svg.append("g");
 colorRamp=d3.scale.linear().domain([0,1,5,10]).range(["#004e99","#7e8fc3","#c28711","#ad5041"])
 
 d3.json("routes_topo.json", function(error, routes) {
-  
+
+d3.json("topocoast.json", function(error, coast) {
+  exposedCoast = coast;
+})
+
   exposedroutes = routes;
 
   svg.call(zoom);
@@ -60,9 +64,7 @@ d3.json("routes_topo.json", function(error, routes) {
   .append("path")
   .attr("class", "routes links")
   .attr("d", path)
-  .style("stroke-width", 2)
-  .style("stroke-opacity", .75)
-  .style("stroke", function(d,i) {return colorRamp(d.properties.e)})
+  .style("stroke", function(d) {return typeHash[d.properties.t]}) 
   .on("mouseover", function(d) {
 	d3.select(this).transition().duration(500).style("stroke-opacity", 1);
 	})
@@ -149,14 +151,14 @@ d3.csv("sites.csv", function(error, sites) {
   
   osites
   .append("circle")
-  .attr("r", 30 / zoom.scale())
+  .attr("r", scaled(30))
   .attr("class", "sitecirc")
 
   osites
   .append("circle")
-  .attr("r", 25 / zoom.scale())
-  .attr("cx", -2 / zoom.scale())
-  .attr("cy", -2 / zoom.scale())
+  .attr("r", scaled(25))
+  .attr("cx", scaled(-2))
+  .attr("cy", scaled(-2))
   .style("fill", "#ad5041")
   .attr("class", "sitecirctop")
 
@@ -230,18 +232,19 @@ function zoomComplete() {
   d3.selectAll(".results").style("display", "block")
   d3.selectAll(".routes")
       .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
-      .style("stroke-width", 2 / zoom.scale());
+      .style("stroke-width", scaled(2));
 
   d3.selectAll(".results")
       .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
-      .style("stroke-width", 10 / zoom.scale());
+      .style("stroke-width", scaled(4));
 }
 
 function zoomed() {
 //  d3.selectAll(".routes").style("display", "none")
   d3.selectAll(".results").style("display", "none")
   d3.selectAll(".modal").style("display", "none");
-  d3.selectAll(".results").style("stroke", function(d) {return typeHash[d.properties.segment_type]})
+//  d3.selectAll(".results").style("stroke", function(d) {return typeHash[d.properties.segment_type]})
+  d3.selectAll(".results").style("stroke", "white")
 
 	clearTimeout(refreshTimer);
 	refreshTimer = setTimeout('zoomComplete()', 100);
@@ -271,33 +274,33 @@ function zoomed() {
 }
 
 d3.selectAll("path.hull")
-    .style("stroke-width", 10 / zoom.scale())
+    .style("stroke-width", scaled(10))
     .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
 
 d3.select("#sitesG")
     .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
   
 d3.selectAll(".sitecirc")
-    .attr("r", function(d) {return ((d.betweenness * 4) + 30) / zoom.scale()});
+    .attr("r", function(d) {return scaled((d.betweenness * 4) + 20)});
 
   d3.selectAll("circle.legendRing")
-    .style("stroke-width", (4 / zoom.scale()) + "px");
+    .style("stroke-width", scaled(4) + "px");
 
 d3.selectAll(".sitecirctop")
   .attr("id", function(d,i) {return "sct" + d.id})
-  .attr("r", function(d) {return ((d.betweenness * 4) + 25) / zoom.scale()})
-  .attr("cx", -2 / zoom.scale())
-  .attr("cy", -2 / zoom.scale());
+  .attr("r", function(d) {return scaled((d.betweenness * 4) + 16)})
+  .attr("cx", scaled(-2))
+  .attr("cy", scaled(-2));
 
 d3.selectAll(".slabel")
-  .attr("x", 2 / zoom.scale())
-  .attr("y", -60 / zoom.scale())
-  .attr("font-size", 100 / zoom.scale())
-  .style("stroke-width", 25 / zoom.scale());
+  .attr("x", scaled(2))
+  .attr("y", scaled(-60))
+  .attr("font-size", scaled(100))
+  .style("stroke-width", scaled(25));
   
     d3.selectAll(".routes")
       .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
-      .style("stroke-width", 2 / zoom.scale());
+      .style("stroke-width", scaled(2));
 
 }
 
@@ -337,30 +340,30 @@ function siteClick(d,i) {
 }
 
 function siteOver(d,i) {
-  d3.select("#site_g_"+d.id+"_label").transition().duration(500).style("stroke-width", 75 / zoom.scale())
+  d3.select("#site_g_"+d.id+"_label").transition().duration(500).style("stroke-width", scaled(75))
 }
 
 function siteOut(d,i) {
-  d3.select("#site_g_"+d.id+"_label").transition().duration(500).style("stroke-width", 25 / zoom.scale())
+  d3.select("#site_g_"+d.id+"_label").transition().duration(500).style("stroke-width", scaled(25))
 }
 
 function siteLabel(siteID) {
   d3.select("#showLabelButton").style("display","none")
   d3.select("#hideLabelButton").style("display","block")
   d3.select("#"+siteID).append('text').attr("class","slabel").text(function(d) {return d.label})
-  .attr("x", 2 / zoom.scale())
-  .attr("y", -60 / zoom.scale())
-  .attr("font-size", 100 / zoom.scale())
+  .attr("x", scaled(2))
+  .attr("y", scaled(-60))
+  .attr("font-size", scaled(100))
   .attr("text-anchor", "middle")
   .attr("id", siteID + "_label")
-  .style("stroke-width", 25 / zoom.scale())
+  .style("stroke-width", scaled(25))
   .style("stroke", "white")
   .style("opacity", .75)
   .style("pointer-events","none");
   d3.select("#"+siteID).append('text').attr("class","slabel").text(function(d) {return d.label})
-  .attr("x", 2 / zoom.scale())
-  .attr("y", -60 / zoom.scale())
-  .attr("font-size", 100 / zoom.scale())
+  .attr("x", scaled(2))
+  .attr("y", scaled(-60))
+  .attr("font-size", scaled(100))
   .attr("text-anchor", "middle")
   .style("pointer-events","none")
   .style("stroke", "none");
@@ -625,12 +628,14 @@ function calculateRoute() {
     .attr("class", "results links")
     .style("stroke", function(d) {return typeHash[d.properties.segment_type]})
     .style("stroke-width", 4)
-    .style("opacity", .75)
+    .style("opacity", 1)
     .style("cursor", "pointer")
     .on("click", routeClick)
 
     zoomed();
+    
     populateRouteDialogue(newSettings.source,newSettings.target,currentRoute - 1);
+    
     for (x in exposedsites) {
       exposedsites[x].betweenness = 0;
     }
@@ -718,8 +723,11 @@ function populateRouteDialogue(inSource,inTarget,inRouteID) {
   inSource = idToLabel(inSource);
   inTarget = idToLabel(inTarget);
 
-  d3.selectAll(".results").style("stroke", function(d) {return d.properties.routeID == inRouteID ? "white" : "gray"})
-  
+  d3.selectAll(".results")
+  .style("stroke-width", function(d) {return (d.properties.routeID == inRouteID ? (3 / zoom.scale()) : (9 / zoom.scale())) + "px"})
+//  .style("stroke-width", function(d) {return (d.properties.routeID == inRouteID ? 3 : 9 ) + "px"})
+  .style("stroke", function(d) {return d.properties.routeID == inRouteID ? "black" : "white"})
+
   var routeModalContents = d3.select("#routeResults").style("display", "block").style("padding", "0").style("width", "0px").html('')
   var segmentNumber = routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}).length;
   var durationSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentduration})
@@ -1082,7 +1090,7 @@ function addCartoRow(cartoSettings) {
 
   var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
   var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
-  
+
   var sMaxA = d3.max(exposedsites, function (el) {return d3.transform(el.cartoTranslate).translate[0]});
   var sMaxB = d3.max(exposedsites, function (el) {return d3.transform(el.cartoTranslate).translate[1]});
   var sMinA = d3.min(exposedsites, function (el) {return d3.transform(el.cartoTranslate).translate[0]});
@@ -1098,17 +1106,34 @@ function addCartoRow(cartoSettings) {
 
   
   for (x in exposedsites) {
-    var siteCoords = d3.transform(exposedsites[x].cartoTranslate).translate;
+    
+  }
+  
+    d3.selectAll("g.site").each(function(d,i) {
+
+    var siteCoords = d3.transform(d.cartoTranslate).translate;
     siteCoords[0] = (siteCoords[0] * 4096) + 450;
     siteCoords[1] = (siteCoords[1] * 4096) + 1000;
     
     context.strokeStyle = 'black';
-    context.fillStyle = colorramp(exposedsites[x].cost[0]);
+    context.fillStyle = colorramp(d.cost[0]);
     context.beginPath();
     context.arc(siteCoords[0],siteCoords[1],5,0,2*Math.PI);
     context.fill();
+
+    if (d3.select(this).select("text").empty() == false) {
+    context.lineWidth = 1;
+    context.stroke();    
+    context.font = "11pt Helvetica";
+    context.textAlign = 'center';
+    context.strokeStyle = "rgba(255, 255, 255, 0.5)";
+    context.lineWidth = 3;
+    context.strokeText(d.label, siteCoords[0], siteCoords[1] - 8)
+    context.fillStyle = 'black';
+    context.fillText(d.label, siteCoords[0], siteCoords[1] - 8)
+    }
     
-  }
+  })
   
   var imgUrl = document.getElementById("newCanvas").toDataURL("image/png");
   var detailsDiv = newCartoRow.append("div").style("float", "left").style("width", "170px");
@@ -1154,15 +1179,16 @@ function addRouteRow(routeSettings, newRoute) {
   var diameter = 500,
     radius = diameter/2;
  
-var projection2 = d3.geo.orthographic()
-    .scale(1200)
+var projection2 = d3.geo.mercator()
+    .scale(900)
     .translate([700, 1100])
-    .rotate([-30,0,0]);
+    .rotate([-26,2,0]);
     
     var path2 = d3.geo.path()
     .projection(projection2);
   
   var land = topojson.object(exposedroutes, exposedroutes.objects.new_routes)
+  var coast = topojson.object(exposedCoast, exposedCoast.objects.coast)
   context = canvas.node().getContext("2d");
 
   context.beginPath();
@@ -1173,16 +1199,36 @@ var projection2 = d3.geo.orthographic()
   context.strokeStyle = 'black';
   context.stroke();
 
-  context.strokeStyle = '#ad5041';
-  context.fillStyle = 'none';
+  context.strokeStyle = "rgba(0, 0, 0, 0.1)";
   context.beginPath(), path2.context(context)(land), context.fill(), context.stroke();
+
+  context.strokeStyle = 'black';
+  context.lineWidth = 1;
+  context.beginPath(), path2.context(context)(coast), context.stroke();
   
   var drawRoutes = exposedroutes.objects.new_routes.geometries;
   
-  context.strokeStyle = '#7e8fc3';
-  context.lineWidth = 8;
+  context.strokeStyle = 'darkred';
+  context.lineWidth = 4;
   context.fillStyle = 'none';
   context.beginPath(), path2.context(context)(newRoute), context.fill(), context.stroke();
+  
+  d3.selectAll("g.site").filter(function(el) {return d3.select(this).select("text").empty() == false}).select("text")
+  .each(function(d,i) {
+    var coords = projection2([d.x,d.y])
+  context.font = "11pt Helvetica";
+  context.textAlign = 'center';
+  context.strokeStyle = "rgba(255, 255, 255, 0.5)";
+  context.lineWidth = 3;
+  context.strokeText(d.label, coords[0], coords[1] - 8)
+  context.fillStyle = 'black';
+    context.fillText(d.label, coords[0], coords[1] - 8)
+
+  context.beginPath();
+  context.arc(coords[0], coords[1],5,0,2*Math.PI);
+  context.fill();
+
+    })
   
   var imgUrl = document.getElementById("newCanvas").toDataURL("image/png");
   var detailsDiv = newCartoRow.append("div").style("float", "left").style("width", "170px");
@@ -1232,5 +1278,28 @@ function formatSettings(incSettings, targetSelection, imgUrl) {
   
 //  var figureDiv = targetSelection.append("div").style("width", "500px").style("overflow", "hidden")
 //  figureDiv.append("p").html(JSON.stringify(incSettings))
+
+}
+
+function scaled(incomingNumber) {
+  return incomingNumber / zoom.scale();
+}
+
+function updateBGRoutes() {
+  var activeTypes = [];
+  if (d3.select("#coastFlip").classed("active") || d3.select("#dayFlip").classed("active")) {
+    activeTypes.push("coastal");
+  }
+  if (d3.select("#riverFlip").classed("active")) {
+    activeTypes.push("upstream","downstream");    
+  }
+  if (d3.select("#seaFlip").classed("active")) {
+    activeTypes.push("overseas");
+  }
+  if (d3.select("#roadFlip").classed("active")) {
+    activeTypes.push("road");    
+  }
+  
+  d3.selectAll(".routes").style("display", function(d) {return activeTypes.indexOf(d.properties.t) > -1 ? "block" : "none"})
 
 }
