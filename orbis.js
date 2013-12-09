@@ -1248,14 +1248,30 @@ var projection2 = d3.geo.mercator()
 function formatSettings(incSettings, targetSelection, imgUrl) {
   exposedSettings = incSettings;
   
+  var longLable = incSettings.centerID ? siteHash[incSettings.centerID].label + " Cartogram" : siteHash[incSettings.source].label + " to " + siteHash[incSettings.target].label;
+  var da = new Date();
+  var dateStamp = da.getMonth + " - " + da.getDate() + " - " + da.getFullYear();
+
   var annotationDiv = targetSelection.append("div").style("overflow", "hidden").style("padding-left", "10px").style("width", "300px").style("float", "left");
 
-  annotationDiv.append("h3")
-  .html(incSettings.centerID ? siteHash[incSettings.centerID].label + " Cartogram" : siteHash[incSettings.source].label + " to " + siteHash[incSettings.target].label)
-  
+  annotationDiv.append("h3").style("margin-top", 0)
+  .html(longLable)
+
+
   annotationDiv.append("p").html("Priority: " + incSettings.priority
     + ", Month: " + incSettings.month + ", vehicle: " + incSettings.vehicle + ", transfer cost: " +
     incSettings.transfer + "modes: ");
+  annotationDiv.append("button").html("Open in a new tab")
+  .on ("click", function () {
+  var newPage1 = "<html><head><title>" + longLable + "</title></head><body><div><h1>" + longLable + "<img src='";
+  var newPage2 = "' /></div><div><p>Scheidel, W. and Meeks, E. (May 2, 2012). ORBIS: The Stanford Geospatial Network Model of the Roman World. Retrieved " + da.toDateString() + ", from http://orbis.stanford.edu.</div></body></html>";
+  
+  var opened = window.open("", "_blank");
+  window.focus();
+  opened.document.write(newPage1 + imgUrl + newPage2);
+    
+  }
+       )
   
   var newRow = d3.select("#recTableActual").append("tr").attr("class", incSettings.centerID ? "cartoRow resultsRow" : "routeRow resultsRow");
     
