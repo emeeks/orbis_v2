@@ -448,7 +448,33 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
       }
     }
   }
-  
+  var minX = d3.min(exposedsites, function(el) {return projection([el.x,el.y])[0]})
+  var maxX = d3.max(exposedsites, function(el) {return projection([el.x,el.y])[0]})
+  var minY = d3.min(exposedsites, function(el) {return projection([el.x,el.y])[1]})
+  var maxY = d3.max(exposedsites, function(el) {return projection([el.x,el.y])[1]})
+  var xramp=d3.scale.linear().domain([minX,maxX]).range([0,960]);
+  var yramp=d3.scale.linear().domain([maxY,minY]).range([0,960]);
+  var costramp=d3.scale.linear().domain([0,max]).range([0,1000]);
+
+    function findx(costin, thisx, thisy, cenx, ceny)
+  {
+    var projectedCoordsThis = projection([thisx,thisy]);
+    var projectedCoordsCen = projection([cenx,ceny]);
+    var xdiff = xramp(projectedCoordsThis[0]) - xramp(projectedCoordsCen[0]) + .001;
+    var ydiff = yramp(projectedCoordsThis[1]) - yramp(projectedCoordsCen[1]) + .001;		
+    var hypotenuse = Math.sqrt((Math.pow(xdiff,2)) + (Math.pow(ydiff,2)));
+    var ratio = costramp(costin) / hypotenuse;
+    return (ratio * xdiff) + 480;
+  }
+
+  function findy(costin, thisx, thisy, cenx, ceny) {
+    var xdiff = xramp(thisx) - xramp(cenx) + .001;
+    var ydiff = yramp(thisy) - yramp(ceny) + .001;
+    var hypotenuse = Math.sqrt(Math.pow(xdiff,2) + Math.pow(ydiff,2));
+    var ratio = costramp(costin) / hypotenuse;
+    return (ratio * ydiff) + 480;
+  }
+
   svg.selectAll("g.site")
   .each(function(d) {
     d.cartoTranslate = "translate("+ (mainXRamp(findx(d["cost"][0],d.x,d.y,centerX,centerY))) + "," + (mainYRamp(findy(d["cost"][0],d.x,d.y,centerX,centerY))) + ")scale(.159)";
@@ -546,30 +572,6 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   addCartoRow(newSettings);
 
   })
-  function findx(costin, thisx, thisy, cenx, ceny)
-  {
-    var xramp=d3.scale.linear().domain([-8.5,43]).range([0,960]);
-    var yramp=d3.scale.linear().domain([55.5,22.5]).range([0,960]);
-    var costramp=d3.scale.linear().domain([0,max]).range([0,1000]);				
-    var projectedCoordsThis = projection([thisx,thisy]);
-    var projectedCoordsCen = projection([cenx,ceny]);						  
-    var xdiff = xramp(projectedCoordsThis[0]) - xramp(projectedCoordsCen[0]) + .001;
-    var ydiff = yramp(projectedCoordsThis[1]) - yramp(projectedCoordsCen[1]) + .001;		
-    var hypotenuse = Math.sqrt((Math.pow(xdiff,2)) + (Math.pow(ydiff,2)));
-    var ratio = costramp(costin) / hypotenuse;
-    return (ratio * xdiff) + 480;
-  }
-
-  function findy(costin, thisx, thisy, cenx, ceny) {
-    var xramp=d3.scale.linear().domain([-8.5,43]).range([0,960]);
-    var yramp=d3.scale.linear().domain([55.5,22.5]).range([0,960]);
-    var costramp=d3.scale.linear().domain([0,max]).range([0,1000]);
-    var xdiff = xramp(thisx) - xramp(cenx) + .001;
-    var ydiff = yramp(thisy) - yramp(ceny) + .001;
-    var hypotenuse = Math.sqrt(Math.pow(xdiff,2) + Math.pow(ydiff,2));
-    var ratio = costramp(costin) / hypotenuse;
-    return (ratio * ydiff) + 480;
-  }
 
 
 }
@@ -1263,7 +1265,7 @@ function formatSettings(incSettings, targetSelection, imgUrl) {
     incSettings.transfer + "modes: ");
   annotationDiv.append("button").html("Open in a new tab")
   .on ("click", function () {
-  var newPage1 = "<html><head><title>" + longLable + "</title></head><body><div><h1>" + longLable + "<img src='";
+  var newPage1 = "<html><head><title>" + longLable + "</title></head><style>div: {width:100%;}</style><body><div><h1>" + longLable + "</div><div><img src='";
   var newPage2 = "' /></div><div><p>Scheidel, W. and Meeks, E. (May 2, 2012). ORBIS: The Stanford Geospatial Network Model of the Roman World. Retrieved " + da.toDateString() + ", from http://orbis.stanford.edu.</div></body></html>";
   
   var opened = window.open("", "_blank");
