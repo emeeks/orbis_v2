@@ -53,7 +53,9 @@ d3.json("topocoast.json", function(error, coast) {
 })
 
   exposedroutes = routes;
-
+  exposedGeoms = topojson.object(routes, routes.objects.new_routes).geometries;
+  simplifiedGeoms = [];
+  
   svg.call(zoom);
   
   var routeG = svg.append("g").attr("id", "routesContainer")
@@ -72,6 +74,21 @@ d3.json("topocoast.json", function(error, coast) {
 	d3.select(this).transition().duration(500).style("stroke-opacity", .5);
 	});
 
+      d3.selectAll("path.routes").each(function(d,i) {
+      var segLength = d3.select(this).node().getTotalLength();
+	var simplifiedObject = {coordinates: [], type:"LineString", id: d.id, properties: d.properties};
+      for (x=0;x<=1;x+=.1) {
+	var segPoint = d3.select(this).node().getPointAtLength(segLength * x);
+	var segPointProjected = projection.invert([segPoint.x,segPoint.y])
+	simplifiedObject.coordinates.push([segPointProjected[0],segPointProjected[1]]);	
+	}
+	simplifiedGeoms.push(simplifiedObject);
+	})
+
+  routeG.selectAll(".routes")
+  .data(simplifiedGeoms)
+  .attr("d", path)
+  
   refreshTimer = setTimeout('zoomComplete()', 100);
 
 d3.csv("sites.csv", function(error, sites) {
