@@ -249,8 +249,6 @@ function zoomed() {
 	clearTimeout(refreshTimer);
 	refreshTimer = setTimeout('zoomComplete()', 100);
 	refreshSet++;
-        
- if (cartogramRunning == false) {
 
   var tiles = tile
       .scale(zoom.scale())
@@ -271,7 +269,6 @@ function zoomed() {
       .attr("height", 1)
       .attr("x", function(d) { return d[0]; })
       .attr("y", function(d) { return d[1]; });
-}
 
 d3.selectAll("path.hull")
     .style("stroke-width", scaled(10))
@@ -414,6 +411,8 @@ function aquaticOptions(button) {
 
 function cartogram(centerX,centerY,centerID) {
   
+
+  
 d3.selectAll("g.legendRing").remove();
 
 d3.selectAll(".routes").filter(function(el) {return el.properties.source == undefined || el.properties.target == undefined ? this : null}).remove();
@@ -453,36 +452,36 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   var minY = d3.min(exposedsites, function(el) {return projection([el.x,el.y])[1]})
   var maxY = d3.max(exposedsites, function(el) {return projection([el.x,el.y])[1]})
   var xramp=d3.scale.linear().domain([minX,maxX]).range([0,960]);
-  var yramp=d3.scale.linear().domain([maxY,minY]).range([0,960]);
+  var yramp=d3.scale.linear().domain([minY,maxY]).range([0,960]);
   var costramp=d3.scale.linear().domain([0,max]).range([0,1000]);
 
     function findx(costin, thisx, thisy, cenx, ceny)
   {
     var projectedCoordsThis = projection([thisx,thisy]);
     var projectedCoordsCen = projection([cenx,ceny]);
-    var xdiff = xramp(projectedCoordsThis[0]) - xramp(projectedCoordsCen[0]) + .001;
-    var ydiff = yramp(projectedCoordsThis[1]) - yramp(projectedCoordsCen[1]) + .001;		
+    var xdiff = xramp(projectedCoordsThis[0]) - xramp(projectedCoordsCen[0]) + .00001;
+    var ydiff = yramp(projectedCoordsThis[1]) - yramp(projectedCoordsCen[1]) + .00001;		
     var hypotenuse = Math.sqrt((Math.pow(xdiff,2)) + (Math.pow(ydiff,2)));
     var ratio = costramp(costin) / hypotenuse;
-    return (ratio * xdiff) + 480;
+    return (ratio * xdiff * .0001) + projectedCoordsCen[0];
   }
 
   function findy(costin, thisx, thisy, cenx, ceny) {
-    var xdiff = xramp(thisx) - xramp(cenx) + .001;
-    var ydiff = yramp(thisy) - yramp(ceny) + .001;
+    var projectedCoordsThis = projection([thisx,thisy]);
+    var projectedCoordsCen = projection([cenx,ceny]);
+    var xdiff = xramp(projectedCoordsThis[0]) - xramp(projectedCoordsCen[0]) + .00001;
+    var ydiff = yramp(projectedCoordsThis[1]) - yramp(projectedCoordsCen[1]) + .00001;		
     var hypotenuse = Math.sqrt(Math.pow(xdiff,2) + Math.pow(ydiff,2));
     var ratio = costramp(costin) / hypotenuse;
-    return (ratio * ydiff) + 480;
+    return (ratio * ydiff * .0001) + projectedCoordsCen[1];
   }
 
   svg.selectAll("g.site")
   .each(function(d) {
-    d.cartoTranslate = "translate("+ (mainXRamp(findx(d["cost"][0],d.x,d.y,centerX,centerY))) + "," + (mainYRamp(findy(d["cost"][0],d.x,d.y,centerX,centerY))) + ")scale(.159)";
+    d.cartoTranslate = "translate("+ (findx(d["cost"][0],d.x,d.y,centerX,centerY))  + "," + (findy(d["cost"][0],d.x,d.y,centerX,centerY)) + ")scale(.159)";
   })
 
-  
-  d3.selectAll("image").style("display", "none");
-//  d3.selectAll("path").style("display", "none");
+  d3.selectAll("image").transition().duration(3000).style("opacity", .5);
   d3.selectAll("path.links").each(function(d) {
     var xposition = -1;
     var yposition = -1;
@@ -494,11 +493,11 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   .y(function(p) {return lineInterpolatorY(p)});
   
   function lineInterpolatorX (incomingRoute) {
-    xposition++;return mainXRamp(findx(cartoRamp(xposition),incomingRoute[0],incomingRoute[1],centerX,centerY))
+    xposition++;return findx(cartoRamp(xposition),incomingRoute[0],incomingRoute[1],centerX,centerY)
   }
 
   function lineInterpolatorY (incomingRoute) {
-    yposition++;return mainYRamp(findy(cartoRamp(yposition),incomingRoute[0],incomingRoute[1],centerX,centerY))
+    yposition++;return findy(cartoRamp(yposition),incomingRoute[0],incomingRoute[1],centerX,centerY)
   }
   d.cartoD = cartoPath(d.coordinates);
 
@@ -580,7 +579,7 @@ function cartogramOff() {
   d3.selectAll("g.legendRing").remove();
   d3.select("#sitemodal").style("display", "none");
   cartogramRunning = false;
-  d3.selectAll("image").style("display", "block");
+  d3.selectAll("image").transition().duration(3000).style("opacity", 1);
   d3.selectAll("path")
   .transition()
   .duration(3000)
@@ -620,19 +619,22 @@ function calculateRoute() {
       routeSegments.push(routeData.features[x])
     }
 
-  svg.selectAll("path.results").remove();
+//  svg.selectAll("path.results").remove();
   
   svg.selectAll("path.results")
-    .data(routeSegments)
+    .data(routeSegments, function(d) {return d.properties.routeID + "_" + d.properties.segment_id})
     .enter()
     .insert("path", "#sitesG")
     .attr("d", path)
     .attr("class", "results links")
     .style("stroke", function(d) {return typeHash[d.properties.segment_type]})
     .style("stroke-width", 4)
-    .style("opacity", 1)
+    .style("opacity", 0)
     .style("cursor", "pointer")
     .on("click", routeClick)
+    .transition()
+    .duration(1000)
+    .style("opacity", 1)
 
     zoomed();
     
