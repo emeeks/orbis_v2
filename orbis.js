@@ -435,7 +435,7 @@ function cartogram(centerX,centerY,centerID) {
   newSettings["centerID"] = centerID;
   cartogramsRun.push(newSettings)
   
-  cartoQuery = "new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
+//  cartoQuery = "new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
 
   d3.csv(cartoQuery, function(error,cartoData) {
 
@@ -622,7 +622,7 @@ function calculateRoute() {
   var newSettings = getSettings();
   routesRun.splice(0,0,newSettings)
 
-  routeQuery = "new_route.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&s="+newSettings.source+"&t="+newSettings.target+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
+//  routeQuery = "new_route.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&s="+newSettings.source+"&t="+newSettings.target+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
 
   d3.json(routeQuery, function(error,routeData) {
     exposedNewData = routeData;
@@ -1178,7 +1178,7 @@ function addCartoRow(cartoSettings) {
   var gridDiv = newCartoGrid.append("div").style("width", "170px");
   gridDiv.append("img").attr("src", imgUrl).style("width", "140px").style("height", "140px")
   .style("cursor", "pointer")
-  .on("click", function() {runCarto(siteHash[cartoSettings.centerID].x,siteHash[cartoSettings.centerID].y,cartoSettings.centerID, cartogramsRun.length - 1)});
+  .attr("onclick", function() {return "runCarto(" + siteHash[cartoSettings.centerID].x + "," + siteHash[cartoSettings.centerID].y + "," + cartoSettings.centerID + "," + (cartogramsRun.length - 1) + ");"})
   newCartoGrid.append("span").style("position", "absolute").style("bottom", "10px")
   .html(siteHash[cartoSettings.centerID].label)
   
@@ -1275,9 +1275,9 @@ var projection2 = d3.geo.mercator()
   var gridDiv = newCartoGrid.append("div").style("width", "140px");
   gridDiv.append("img").attr("src", imgUrl).style("width", "140px").style("height", "100px")
   .style("cursor", "pointer")
-  .on("click", function() {  populateRouteDialogue(routeSettings.source,routeSettings.target,routesRun.length - 1); })
+  .attr("onclick", function() { return "populateRouteDialogue(" + routeSettings.source + "," + routeSettings.target + "," + (routesRun.length - 1) + ");" })
   ;
-
+  
   newCartoGrid.append("span").style("position", "absolute").style("bottom", "10px")
   .html(siteHash[routeSettings.source].label + " -> " + siteHash[routeSettings.target].label)
     
@@ -1317,12 +1317,13 @@ function formatSettings(incSettings, targetSelection, imgUrl) {
   
   if (incSettings.centerID) {    
       annotationDiv.append("button").html("Redisplay")
-      .on("click", function() {runCarto(siteHash[incSettings.centerID].x,siteHash[incSettings.centerID].y,incSettings.centerID, cartogramsRun.length - 1)})
+      .attr("onclick", function() {return "runCarto(" + siteHash[incSettings.centerID].x + "," + siteHash[incSettings.centerID].y + "," + incSettings.centerID + "," + (cartogramsRun.length - 1) + ");"})
   }
   else {
       annotationDiv.append("button").html("Redisplay")
-      .on("click", function() {  populateRouteDialogue(incSettings.source,incSettings.target,routesRun.length - 1); })
+      .attr("onclick", function() { return "populateRouteDialogue(" + incSettings.source + "," + incSettings.target + "," + (routesRun.length - 1) + ");" })
   }
+
 
   
   var newRow = d3.select("#recTableActual").append("tr").attr("class", incSettings.centerID ? "cartoRow resultsRow" : "routeRow resultsRow");
@@ -1346,11 +1347,11 @@ function formatSettings(incSettings, targetSelection, imgUrl) {
   
   if (incSettings.centerID) {
       imgButton
-      .on("click", function() {runCarto(siteHash[incSettings.centerID].x,siteHash[incSettings.centerID].y,incSettings.centerID, cartogramsRun.length - 1)})
+      .attr("onclick", function() {return "runCarto(" + siteHash[incSettings.centerID].x + "," + siteHash[incSettings.centerID].y + "," + incSettings.centerID + "," + (cartogramsRun.length - 1) + ");"})
   }
     else {
       imgButton
-      .on("click", function() {  populateRouteDialogue(incSettings.source,incSettings.target,routesRun.length - 1); })
+      .attr("onclick", function() { return "populateRouteDialogue(" + incSettings.source + "," + incSettings.target + "," + (routesRun.length - 1) + ");" })
   }
   
 //  var figureDiv = targetSelection.append("div").style("width", "500px").style("overflow", "hidden")
