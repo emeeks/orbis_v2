@@ -430,7 +430,40 @@ function cartogram(centerX,centerY,centerID) {
   
 
   
-d3.selectAll("g.legendRing").remove();
+  
+  var newSettings = getSettings();
+  newSettings["centerID"] = centerID;
+  cartogramsRun.push(newSettings)
+  
+  cartoQuery = "new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
+
+  d3.csv(cartoQuery, function(error,cartoData) {
+
+  exposedCarto = cartoData;
+
+  for (x in exposedsites) {
+    if(exposedsites[x]) {
+      for (y in cartoData) {
+        if (cartoData[y].target == exposedsites[x].id) {
+          exposedsites[x].cost.push(parseFloat(cartoData[y].cost));
+          break;
+        }
+      }
+    }
+  }
+  
+  runCarto(centerX,centerY,centerID, cartogramsRun.length - 1);
+
+  addCartoRow(newSettings);
+
+  })
+
+
+}
+
+function runCarto(centerX,centerY,centerID, cartoPosition) {
+  
+  d3.selectAll("g.legendRing").remove();
 
 d3.selectAll(".routes").filter(function(el) {return el.properties.source == undefined || el.properties.target == undefined ? this : null}).remove();
 
@@ -438,32 +471,14 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   d3.select("#hullButton").style("display","none");
   
   cartogramRunning = true;
-  
-  var newSettings = getSettings();
-  newSettings["centerID"] = centerID;
-  cartogramsRun.splice(0,0,newSettings)
-  
-//  cartoQuery = "new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
 
-  d3.csv(cartoQuery, function(error,cartoData) {
-
-  exposedCarto = cartoData;
-  max = d3.max(cartoData, function(p) {return parseFloat(p["cost"])});
+  max = d3.max(exposedsites, function(el) {return el["cost"][cartoPosition]});
   mid = max / 2;
 
   var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
   var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
 
-  for (x in exposedsites) {
-    if(exposedsites[x]) {
-      for (y in cartoData) {
-        if (cartoData[y].target == exposedsites[x].id) {
-          exposedsites[x].cost.splice(0,0,cartoData[y].cost);
-          break;
-        }
-      }
-    }
-  }
+  
   var minX = d3.min(exposedsites, function(el) {return projection([el.x,el.y])[0]})
   var maxX = d3.max(exposedsites, function(el) {return projection([el.x,el.y])[0]})
   var minY = d3.min(exposedsites, function(el) {return projection([el.x,el.y])[1]})
@@ -495,7 +510,7 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
 
   svg.selectAll("g.site")
   .each(function(d) {
-    d.cartoTranslate = "translate("+ (findx(d["cost"][0],d.x,d.y,centerX,centerY))  + "," + (findy(d["cost"][0],d.x,d.y,centerX,centerY)) + ")scale(.159)";
+    d.cartoTranslate = "translate("+ (findx(d["cost"][cartoPosition],d.x,d.y,centerX,centerY))  + "," + (findy(d["cost"][cartoPosition],d.x,d.y,centerX,centerY)) + ")scale(.159)";
   })
 
   d3.selectAll("image").transition().duration(3000).style("opacity", .5);
@@ -503,7 +518,7 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
     var xposition = -1;
     var yposition = -1;
   var lineLength = d.coordinates.length - 1;
-  var cartoRamp = d3.scale.linear().range([d.properties.source["cost"][0],d.properties.target["cost"][0]]).domain([0, lineLength]);
+  var cartoRamp = d3.scale.linear().range([d.properties.source["cost"][cartoPosition],d.properties.target["cost"][cartoPosition]]).domain([0, lineLength]);
   cartoPath =
   d3.svg.line()
   .x(function(p) {return lineInterpolatorX(p)})
@@ -530,14 +545,14 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   svg.selectAll(".sitecirctop")
   .transition()
   .duration(3000)
-  .style("fill", function(d) { return (colorramp(d["cost"][0]))});
+  .style("fill", function(d) { return (colorramp(d["cost"][cartoPosition]))});
   
   d3.selectAll(".links").transition().duration(3000).attr("d", function(d) {return (d.cartoD ? d.cartoD : "")})
 
   sortedSites = exposedsites.sort(function (a,b) {
-    if (parseFloat(a["cost"][0]) < parseFloat(b["cost"][0]))
+    if (parseFloat(a["cost"][cartoPosition]) < parseFloat(b["cost"][cartoPosition]))
     return -1;
-    if (parseFloat(a["cost"][0]) > parseFloat(b["cost"][0]))
+    if (parseFloat(a["cost"][cartoPosition]) > parseFloat(b["cost"][cartoPosition]))
     return 1;
     return 0;
     });
@@ -584,12 +599,6 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   .transition()
   .duration(3000)
   .style("stroke-width", (4 / zoom.scale()) + "px")
-
-  addCartoRow(newSettings);
-
-  })
-
-
 }
 
 function cartogramOff() {
@@ -613,7 +622,7 @@ function calculateRoute() {
   var newSettings = getSettings();
   routesRun.splice(0,0,newSettings)
 
-//  routeQuery = "new_route.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&s="+newSettings.source+"&t="+newSettings.target+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
+  routeQuery = "new_route.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&s="+newSettings.source+"&t="+newSettings.target+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
 
   d3.json(routeQuery, function(error,routeData) {
     exposedNewData = routeData;
@@ -726,7 +735,7 @@ function routeClick(d,i) {
   modalContents.append("p").html("Length: " + d.properties.segmentlength);
   modalContents.append("p").html("Expense (D): " + d.properties.segmentexpense_d);
   modalContents.append("p").html("Expense (W): " + d.properties.segmentexpense_w);
-  modalContents.append("p").html("Expense (C): " + d.properties.segmentexpense_c);  
+  modalContents.append("p").html("Expense (C): " + d.properties.segmentexpense_c);
   populateRouteDialogue(routesRun[d.properties.routeID].source,routesRun[d.properties.routeID].target,d.properties.routeID);
   d3.select(this).style("stroke", "red")
 
@@ -925,6 +934,12 @@ function closeTimelineTray() {
 
 function fullscreenMap() {
   d3.selectAll(".controlsDiv").style("display", "none")
+  d3.select("#restoreButton").style("display", "block")
+}
+
+function restoreControlsMap() {
+  d3.selectAll(".controlsDiv").style("display", "block")
+  d3.select("#restoreButton").style("display", "none")
 }
 
 function tutorial(step) {
@@ -1161,7 +1176,9 @@ function addCartoRow(cartoSettings) {
   detailsDiv.append("img").attr("src", imgUrl).style("width", "170px").style("height", "170px");
 
   var gridDiv = newCartoGrid.append("div").style("width", "170px");
-  gridDiv.append("img").attr("src", imgUrl).style("width", "140px").style("height", "140px");
+  gridDiv.append("img").attr("src", imgUrl).style("width", "140px").style("height", "140px")
+  .style("cursor", "pointer")
+  .on("click", function() {runCarto(siteHash[cartoSettings.centerID].x,siteHash[cartoSettings.centerID].y,cartoSettings.centerID, cartogramsRun.length - 1)});
   newCartoGrid.append("span").style("position", "absolute").style("bottom", "10px")
   .html(siteHash[cartoSettings.centerID].label)
   
@@ -1256,7 +1273,11 @@ var projection2 = d3.geo.mercator()
   detailsDiv.append("img").attr("src", imgUrl).style("width", "170px").style("height", "120px");
 
   var gridDiv = newCartoGrid.append("div").style("width", "140px");
-  gridDiv.append("img").attr("src", imgUrl).style("width", "140px").style("height", "100px");
+  gridDiv.append("img").attr("src", imgUrl).style("width", "140px").style("height", "100px")
+  .style("cursor", "pointer")
+  .on("click", function() {  populateRouteDialogue(routeSettings.source,routeSettings.target,routesRun.length - 1); })
+  ;
+
   newCartoGrid.append("span").style("position", "absolute").style("bottom", "10px")
   .html(siteHash[routeSettings.source].label + " -> " + siteHash[routeSettings.target].label)
     
@@ -1294,6 +1315,16 @@ function formatSettings(incSettings, targetSelection, imgUrl) {
   }
        )
   
+  if (incSettings.centerID) {    
+      annotationDiv.append("button").html("Redisplay")
+      .on("click", function() {runCarto(siteHash[incSettings.centerID].x,siteHash[incSettings.centerID].y,incSettings.centerID, cartogramsRun.length - 1)})
+  }
+  else {
+      annotationDiv.append("button").html("Redisplay")
+      .on("click", function() {  populateRouteDialogue(incSettings.source,incSettings.target,routesRun.length - 1); })
+  }
+
+  
   var newRow = d3.select("#recTableActual").append("tr").attr("class", incSettings.centerID ? "cartoRow resultsRow" : "routeRow resultsRow");
     
   newRow.append("td").html(siteHash[incSettings.source].label)
@@ -1301,17 +1332,26 @@ function formatSettings(incSettings, targetSelection, imgUrl) {
   newRow.append("td").html(incSettings.priority)
   newRow.append("td").html(incSettings.month)
   newRow.append("td").html(incSettings.vehicle)
-  newRow.append("td").append("div")
+  var imgButton = newRow.append("td").append("div")
   .style("width", "90px")
   .style("height", "40px")
   .style("overflow", "hidden")
   .append("img").attr("src", imgUrl)
+  .style("cursor", "pointer")
   .style("position", "relative")
   .style("left", "-20px")
   .style("top", incSettings.centerID ? "-20px" : "-10px")
   .style("width", "120px")
   .style("height", incSettings.centerID ? "120px" : "80px")
-
+  
+  if (incSettings.centerID) {
+      imgButton
+      .on("click", function() {runCarto(siteHash[incSettings.centerID].x,siteHash[incSettings.centerID].y,incSettings.centerID, cartogramsRun.length - 1)})
+  }
+    else {
+      imgButton
+      .on("click", function() {  populateRouteDialogue(incSettings.source,incSettings.target,routesRun.length - 1); })
+  }
   
 //  var figureDiv = targetSelection.append("div").style("width", "500px").style("overflow", "hidden")
 //  figureDiv.append("p").html(JSON.stringify(incSettings))
