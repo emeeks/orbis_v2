@@ -25,7 +25,13 @@ var center = projection([12, 42]);
 path = d3.geo.path()
     .projection(projection);
 
-var zoom = d3.behavior.zoom()
+brush = d3.svg.brush()
+    .x(d3.scale.identity().domain([0, width]))
+    .y(d3.scale.identity().domain([0, height]))
+    .extent([[100, 100], [200, 200]])
+    .on("brush", brushed);
+
+zoom = d3.behavior.zoom()
     .scale(projection.scale() * 2 * Math.PI)
     .scaleExtent([1 << 12, 1 << 17])
     .translate([width - center[0], height - center[1]])
@@ -44,6 +50,19 @@ svg = d3.select("#vizcontainer").append("svg")
 
 var raster = svg.append("g");
 
+var brushG = svg.append("g")
+    .attr("class", "brush")
+    .style("display", "none")
+    .call(brush);
+
+svg.append("g")
+    .attr("class", "zoom")
+    .call(zoom)
+    .append("rect")
+    .attr("width", 1600)
+    .attr("height", 1000)
+    .style("opacity", 0);
+
 colorRamp=d3.scale.linear().domain([0,1,5,10]).range(["#004e99","#7e8fc3","#c28711","#ad5041"])
 
 d3.json("routes_topo.json", function(error, routes) {
@@ -55,8 +74,6 @@ d3.json("topocoast.json", function(error, coast) {
   exposedroutes = routes;
   exposedGeoms = topojson.object(routes, routes.objects.new_routes).geometries;
   simplifiedGeoms = [];
-  
-  svg.call(zoom);
   
   var routeG = svg.append("g").attr("id", "routesContainer")
 
@@ -257,10 +274,9 @@ function zoomComplete() {
 }
 
 function zoomed() {
-//  d3.selectAll(".routes").style("display", "none")
+
   d3.selectAll(".results").style("display", "none")
   d3.selectAll(".modal").style("display", "none");
-//  d3.selectAll(".results").style("stroke", function(d) {return typeHash[d.properties.segment_type]})
   d3.selectAll(".results").style("stroke", "white")
 
 	clearTimeout(refreshTimer);
@@ -435,7 +451,7 @@ function cartogram(centerX,centerY,centerID) {
   newSettings["centerID"] = centerID;
   cartogramsRun.push(newSettings)
   
-//  cartoQuery = "new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
+  cartoQuery = "new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
 
   d3.csv(cartoQuery, function(error,cartoData) {
 
@@ -622,7 +638,7 @@ function calculateRoute() {
   var newSettings = getSettings();
   routesRun.splice(0,0,newSettings)
 
-//  routeQuery = "new_route.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&s="+newSettings.source+"&t="+newSettings.target+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
+  routeQuery = "new_route.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&s="+newSettings.source+"&t="+newSettings.target+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
 
   d3.json(routeQuery, function(error,routeData) {
     exposedNewData = routeData;
@@ -777,13 +793,13 @@ function populateRouteDialogue(inSource,inTarget,inRouteID) {
   routeModalContents.transition().duration(750).style("padding", "0 20px").style("width", "400px")
 }
 
-function onOffSite(d) {
-  if (excludedSites.indexOf(d.id) > -1) {
+function onOffSite(d, forceChange) {
+  if (excludedSites.indexOf(d.id) > -1 && forceChange != "off") {
     d3.select("#sct" + d.id).style("opacity", 1)
     excludedSites = excludedSites.filter(function (el) {return el != d.id && el != "1" +d.id+ "" && el != "2" +d.id+ "" && el != "3" +d.id+ "" && el != "4" +d.id+ ""})
     d3.select("#incExcButton").html("Exclude")
   }
-  else {
+  else if (excludedSites.indexOf(d.id) == -1 && forceChange != "on") {
     d3.select("#sct" + d.id).style("opacity", .5)
     excludedSites.push("" +d.id+ "")
     //We also need to exclude the meta nodes that act as transfer points
@@ -1380,4 +1396,55 @@ function updateBGRoutes() {
   
   d3.selectAll(".routes").style("display", function(d) {return activeTypes.indexOf(d.properties.t) > -1 ? "block" : "none"})
 
+}
+
+function brushed() {
+  
+  d3.select("#infopopup").style("display", "block");
+  d3.select("#infocontent").html("<p>You can draw a box to select multiple sites and remove or add them to the network.</p>");
+  d3.selectAll(".multiSiteControl").style("display", "inline")
+  
+  var currentExtent = brush.extent();
+  var filteredSelection = d3.selectAll("g.site").filter(function(el) {
+    var thisX = (d3.transform(d3.select(this).attr("transform")).translate[0] * zoom.scale()) + zoom.translate()[0];
+    var thisY = (d3.transform(d3.select(this).attr("transform")).translate[1] * zoom.scale()) + zoom.translate()[1];
+    return thisX >= currentExtent[0][0] && thisX <= currentExtent[1][0] && thisY >= currentExtent[0][1] && thisY <= currentExtent[1][1] ? this : null;
+  })
+  
+  d3.selectAll("g.site").select(".sitecirctop").style("fill", "#ad5041")
+  
+  filteredSelection.select(".sitecirctop").style("fill", "pink")
+  
+  d3.selectAll("g.changeButton")
+  .attr("transform", function(d,i) {return "translate("+currentExtent[1][0]+","+(currentExtent[0][1] + (i *50)) +")"} )
+
+  if (filteredSelection.empty()) {
+    d3.selectAll(".multiSiteControl").style("display", "none")    
+  }
+  else {
+    d3.select("#infocontent").append("p").html("" + filteredSelection.size() + " sites selected")
+  }
+}
+
+function massSiteChange(onOff) {
+  var currentExtent = brush.extent();
+  var filteredSelection = d3.selectAll("g.site").filter(function(el) {
+    var thisX = (d3.transform(d3.select(this).attr("transform")).translate[0] * zoom.scale()) + zoom.translate()[0];
+    var thisY = (d3.transform(d3.select(this).attr("transform")).translate[1] * zoom.scale()) + zoom.translate()[1];
+    return thisX >= currentExtent[0][0] && thisX <= currentExtent[1][0] && thisY >= currentExtent[0][1] && thisY <= currentExtent[1][1] ? this : null;
+  }).each(function(d) {onOffSite(d, onOff)})
+}
+
+function startBrushing() {
+  d3.select("#startBrushingButton").style("display", "none");
+  d3.select("#stopBrushingButton").style("display", "inline");
+  d3.select("g.zoom").style("display", "none");
+  d3.select("g.brush").style("display", "block");
+}
+
+function stopBrushing() {
+  d3.select("#startBrushingButton").style("display", "inline");
+  d3.select("#stopBrushingButton").style("display", "none");
+  d3.select("g.zoom").style("display", "block");
+  d3.select("g.brush").style("display", "none");
 }

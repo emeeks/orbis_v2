@@ -210,3 +210,13 @@ opacity: 1;
   border-bottom: 20px solid transparent; 
   border-right:20px solid white; 
 }
+
+.brush .extent {
+  stroke: #fff;
+  fill-opacity: .75;
+  shape-rendering: crispEdges;
+}
+
+.multiSiteControl {
+  display: none;
+}

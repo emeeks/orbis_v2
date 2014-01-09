@@ -20,6 +20,7 @@
     <p>Welcome to ORBIS!</p>
     <p>This is a very rough and buggy early example of new functionality for ORBIS. Please send any bugs or feature requests or other feedback to <a href="mailto:emeeks@stanford.edu">Elijah Meeks (emeeks@stanford.edu)</a></p>
     </div>
+      <button class="multiSiteControl" onclick="massSiteChange('off')">Exclude these sites</button><button class="multiSiteControl" onclick="massSiteChange('on')">Include these sites</button>
       </div>
     <div id="tutorialpopup" class="tutorial">
       <span id="infoclosebutton" onclick="d3.select('#tutorialpopup').style('display','none')" >X</span>
@@ -33,6 +34,8 @@
     <div class="controlsDiv" style="position: fixed; top: 10%; right: 0px; height:100px; width: 200px; background: white;">
     <div class="buttonContainer" style="width: 180px;">
       <button style="cursor:pointer;" onclick="fullscreenMap();">Full Screen</button>
+      <button id="startBrushingButton" style="cursor:pointer;" onclick="startBrushing();">Select Sites</button>
+      <button id="stopBrushingButton" style="display:none;cursor:pointer;" onclick="stopBrushing();">Stop Selecting</button>
       <p>Recently Run</p>
       <button onclick="d3.select('#controlbar').style('display', 'none');d3.selectAll('#resultsTable').style('display', 'block');d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.routeRow').style('display','block');d3.selectAll('tr.routeRow').style('display','table-row');">Routes</button>
       <button  onclick="d3.select('#controlbar').style('display', 'none');d3.selectAll('#resultsTable').style('display', 'block');d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.cartoRow').style('display','block');d3.selectAll('tr.cartoRow').style('display','table-row');">Cartograms</button>
