@@ -1,5 +1,6 @@
 
   cartogramRunning = false;
+  voronoiRunning = false;
   routeSegments = [];
   excludedSites = [999];
   //This is an array to hold the carto settings for reference by the clustering function
@@ -7,6 +8,7 @@
   routesRun = [];
   refreshSet = 0;
   currentRoute = 0;
+  lastCartoRan = 0;
 
 var typeHash = {road: "brown", overseas: "green", coastal: "#5CE68A", upstream: "blue", downstream: "blue", ferry: "purple"}
 
@@ -36,7 +38,7 @@ zoom = d3.behavior.zoom()
     .scaleExtent([1 << 12, 1 << 17])
     .translate([width - center[0], height - center[1]])
     .on("zoom", zoomed);
-
+    
 // With the center computed, now adjust the projection such that
 // it uses the zoom behaviorÕs translate and scale.
 projection
@@ -145,7 +147,7 @@ d3.csv("sites.csv", function(error, sites) {
     return -1;
     return 0;
     });
-  var osites = sitesG.selectAll(".sites")
+  var osites = sitesG.selectAll(".site")
   .data(exposedsites)
   .enter()
   .append("g")
@@ -155,7 +157,10 @@ d3.csv("sites.csv", function(error, sites) {
   .style("cursor", "pointer")
   .on("click", siteClick)
   .on("mouseover", siteOver)
-  .on("mouseover", siteOut);
+  .on("mouseover", siteOut)
+  .each(function(d) {
+    d.cartoTranslate = "translate(" + projection([d.x,d.y]) + ")scale(" + projection.scale() + ")";
+  });
 
     var minX = 100;
     var maxX = -100;
@@ -274,6 +279,9 @@ function zoomComplete() {
 }
 
 function zoomed() {
+  if (voronoiRunning == true) {
+    clearVoronoi();
+  }
 
   d3.selectAll(".results").style("display", "none")
   d3.selectAll(".modal").style("display", "none");
@@ -341,11 +349,16 @@ function colorBy(attribute) {
   .transition().duration(500).style("stroke", function(d) {return colorRamp(d.properties[attribute])})
 }
 
-function colorByType() {
+function colorByType(instant) {
   resetButtons("routeLabelButton");
   d3.select("#tButton").classed("active", true)
-  d3.selectAll(".routes")
-  .transition().duration(500).style("stroke", function(d) {return typeHash[d.properties.t]}) 
+  if (!instant) {
+  d3.selectAll("path.routes")
+  .transition().duration(500).style("stroke", function(d) {return typeHash[d.properties.t]})
+  }
+  else {
+  d3.selectAll("path.routes").style("stroke", function(d) {return typeHash[d.properties.t]})    
+  }
 }
 function siteClick(d,i) {
   this.parentNode.appendChild(this);
@@ -478,7 +491,7 @@ function cartogram(centerX,centerY,centerID) {
 }
 
 function runCarto(centerX,centerY,centerID, cartoPosition) {
-  
+    lastCartoRan = cartoPosition;
   d3.selectAll("g.legendRing").remove();
 
 d3.selectAll(".routes").filter(function(el) {return el.properties.source == undefined || el.properties.target == undefined ? this : null}).remove();
@@ -491,9 +504,12 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   max = d3.max(exposedsites, function(el) {return el["cost"][cartoPosition]});
   mid = max / 2;
 
-  var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
+//  var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
+  var colorramp=d3.scale.quantize().domain([0,max]).range(colorbrewer.RdYlBu[7]);
   var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
 
+  d3.selectAll("g.site").style("display", function(d) {return d.cost[cartoPosition] == -1 ? "none" : "block"})
+  d3.selectAll("path.links").style("display", function(d) {return d.properties.source.cost[cartoPosition] == -1 || d.properties.target.cost[cartoPosition] == -1 ? "none" : "block"})
   
   var minX = d3.min(exposedsites, function(el) {return projection([el.x,el.y])[0]})
   var maxX = d3.max(exposedsites, function(el) {return projection([el.x,el.y])[0]})
@@ -618,18 +634,28 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
 }
 
 function cartogramOff() {
+  
   d3.selectAll("g.legendRing").remove();
   d3.select("#sitemodal").style("display", "none");
   cartogramRunning = false;
   d3.selectAll("image").transition().duration(3000).style("opacity", 1);
-  d3.selectAll("path")
-  .transition()
-  .duration(3000)
-  .attr("d", path)
+
+  d3.selectAll("g.site").filter(function(d) {return d.cost[lastCartoRan] == -1 ? this : null}).select(".sitecirctop").style("fill", "lightgray")
+
   d3.selectAll("g.site")
+  .style("display", "block")
   .transition()
   .duration(3000)
   .attr("transform", function(d) {return "translate(" + projection([d.x,d.y]) + ")scale(" + projection.scale() + ")"})
+  .each(function(d) {
+    d.cartoTranslate = "translate(" + projection([d.x,d.y]) + ")scale(" + projection.scale() + ")";
+  });
+
+  d3.selectAll("path.links")
+  .style("display", "block")
+  .transition()
+  .duration(3000)
+  .attr("d", path)
 
   zoomed();
 }
@@ -1140,7 +1166,8 @@ function addCartoRow(cartoSettings) {
   var max = d3.max(exposedsites, function(p) {return parseFloat(p["cost"][0])});
   var mid = max / 2;
 
-  var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
+//  var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
+  var colorramp = d3.scale.quantize().domain([0,max]).range(colorbrewer.Reds[6]);
   var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
 
   var sMaxA = d3.max(exposedsites, function (el) {return d3.transform(el.cartoTranslate).translate[0]});
@@ -1399,7 +1426,10 @@ function updateBGRoutes() {
 }
 
 function brushed() {
-  
+    if (voronoiRunning == true) {
+    clearVoronoi();
+  }
+
   d3.select("#infopopup").style("display", "block");
   d3.select("#infocontent").html("<p>You can draw a box to select multiple sites and remove or add them to the network.</p>");
   d3.selectAll(".multiSiteControl").style("display", "inline")
@@ -1447,4 +1477,52 @@ function stopBrushing() {
   d3.select("#stopBrushingButton").style("display", "none");
   d3.select("g.zoom").style("display", "block");
   d3.select("g.brush").style("display", "none");
+}
+
+function createVoronoi() {
+  clearVoronoi();
+  voronoiRunning = true;
+  d3.selectAll("g.site").selectAll("circle").style("display", "none")
+  voronoi = d3.geom.voronoi()
+  .x(function (el) {return (d3.transform(el.cartoTranslate).translate[0] * zoom.scale()) + zoom.translate()[0];})
+  .y(function (el) {return (d3.transform(el.cartoTranslate).translate[1] * zoom.scale()) + zoom.translate()[1];});
+
+  d3.select("svg").selectAll("clipPath")
+      .data(exposedsites)
+    .enter().append("svg:clipPath")
+      .attr("id", function(d, i) { return "clip-"+i;})
+    .append("svg:circle")
+      .attr('cx', function(d) { return (d3.transform(d.cartoTranslate).translate[0] * zoom.scale()) + zoom.translate()[0]; })
+      .attr('cy', function(d) { return (d3.transform(d.cartoTranslate).translate[1] * zoom.scale()) + zoom.translate()[1]; })
+      .attr('r', zoom.scale() / 80);
+
+  d3.select("svg").insert("g", "#sitesG").selectAll("path.voronoi")
+  .data(voronoi(exposedsites))
+  .enter()
+  .append("path")
+  .style("fill", function(d,i) {return d3.select("#sct" + exposedsites[i].id).style("fill")})
+  .style("stroke", "none")
+  .attr("d", function (d) {return "M" + d.join("L") + "Z";})
+  .attr("clip-path", function(d,i) { return "url(#clip-"+i+")"; })
+  .attr("class", "voronoi")
+  .style("pointer-events", "none")
+  .style("opacity", 0)
+  .transition()
+  .duration(1000)
+  .style("opacity", 1)
+  .transition()
+  .duration(1000)
+  .style("opacity", .90)
+
+  d3.selectAll(".routes")
+  .transition().duration(2000).style("stroke", "black") 
+
+}
+
+function clearVoronoi() {
+  voronoiRunning = false;
+  colorByType(true);
+  d3.selectAll("g.site").selectAll("circle").style("display", "block")
+  d3.selectAll("path.voronoi").remove();
+  d3.selectAll("clipPath").remove();
 }
