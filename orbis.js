@@ -505,8 +505,22 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   mid = max / 2;
 
 //  var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
-  var colorramp=d3.scale.quantize().domain([0,max]).range(colorbrewer.RdYlBu[7]);
+  cartoRamp=d3.scale.quantize().domain([0,max]).range(colorbrewer.Spectral[7]);
   var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
+  d3.selectAll("g.legend").remove();
+  var legendG = d3.select("svg").selectAll("g.legend").data(cartoRamp.range()).enter().append("g")
+  .attr("class", "legend")
+  .attr("transform", function(d, i) {return "translate(" + (300 + (i * 50)) + ",150)"})
+  .on("mouseover", function (d) {d3.selectAll("g.Voronoi")
+      .filter(function (p) {return p.color == d}).style("opacity", 1);
+  })
+  .on("mouseout", function () {d3.selectAll("g.Voronoi").style("opacity", .8);
+  })
+  ;
+  
+  legendG.append("rect").attr("height", 20).attr("width", 50).attr("fill", function(d) {return d});
+  legendG.append("text").style("font-size", "12px").text(function(d) {return d3.round(cartoRamp.invertExtent(d)[0],1)});
+  
 
   d3.selectAll("g.site").style("display", function(d) {return d.cost[cartoPosition] == -1 ? "none" : "block"})
   d3.selectAll("path.links").style("display", function(d) {return d.properties.source.cost[cartoPosition] == -1 || d.properties.target.cost[cartoPosition] == -1 ? "none" : "block"})
@@ -577,7 +591,7 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   svg.selectAll(".sitecirctop")
   .transition()
   .duration(3000)
-  .style("fill", function(d) { return (colorramp(d["cost"][cartoPosition]))});
+  .style("fill", function(d) { return (cartoRamp(d["cost"][cartoPosition]))});
   
   d3.selectAll(".links").transition().duration(3000).attr("d", function(d) {return (d.cartoD ? d.cartoD : "")})
 
@@ -1167,7 +1181,7 @@ function addCartoRow(cartoSettings) {
   var mid = max / 2;
 
 //  var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
-  var colorramp = d3.scale.quantize().domain([0,max]).range(colorbrewer.Reds[6]);
+  var colorramp = d3.scale.quantize().domain([0,max]).range(colorbrewer.Spectral[6]);
   var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
 
   var sMaxA = d3.max(exposedsites, function (el) {return d3.transform(el.cartoTranslate).translate[0]});
@@ -1480,43 +1494,96 @@ function stopBrushing() {
 }
 
 function createVoronoi() {
+  
+  var colorArray = [];
+  d3.selectAll(".sitecirctop").each(function(el) {colorArray.push(d3.select(this).style("fill"))})
+  var colorSet = d3.set(colorArray);
+  var colorKeys = colorSet.values();
+  
   clearVoronoi();
   voronoiRunning = true;
   d3.selectAll("g.site").selectAll("circle").style("display", "none")
   voronoi = d3.geom.voronoi()
   .x(function (el) {return (d3.transform(el.cartoTranslate).translate[0] * zoom.scale()) + zoom.translate()[0];})
   .y(function (el) {return (d3.transform(el.cartoTranslate).translate[1] * zoom.scale()) + zoom.translate()[1];});
+  
+  clippingPolys = [];
+  var cPS = zoom.scale() / 80;
+  exposedsites.forEach(function (el){
+    var c = [(d3.transform(el.cartoTranslate).translate[0] * zoom.scale()) + zoom.translate()[0], (d3.transform(el.cartoTranslate).translate[1] * zoom.scale()) + zoom.translate()[1]];
+    clippingPolys.push([[c[0] - cPS,c[1]],[c[0] -cPS/2,c[1] + cPS],[c[0] + cPS/2,c[1] + cPS],[c[0] + cPS,c[1]],[c[0] + cPS/2,c[1] - cPS],[c[0] - cPS/2,c[1] - cPS]])
+  })
+  
+  vorPolys = voronoi(exposedsites);
+  vorPolys.forEach(function(el,ar) {
+    vorPolys[ar] = d3.geom.polygon(vorPolys[ar]).clip(clippingPolys[ar])
+    })
 
-  d3.select("svg").selectAll("clipPath")
-      .data(exposedsites)
-    .enter().append("svg:clipPath")
-      .attr("id", function(d, i) { return "clip-"+i;})
-    .append("svg:circle")
-      .attr('cx', function(d) { return (d3.transform(d.cartoTranslate).translate[0] * zoom.scale()) + zoom.translate()[0]; })
-      .attr('cy', function(d) { return (d3.transform(d.cartoTranslate).translate[1] * zoom.scale()) + zoom.translate()[1]; })
-      .attr('r', zoom.scale() / 80);
-
-  d3.select("svg").insert("g", "#sitesG").selectAll("path.voronoi")
-  .data(voronoi(exposedsites))
+  d3.select("#voronoiG").remove();
+  d3.select("svg").insert("g", "#sitesG").attr("id", "voronoiG").selectAll("path.voronoi")
+  .data(vorPolys)
   .enter()
   .append("path")
   .style("fill", function(d,i) {return d3.select("#sct" + exposedsites[i].id).style("fill")})
-  .style("stroke", "none")
+  .style("stroke", function(d,i) {return d3.select("#sct" + exposedsites[i].id).style("fill")})
+  .style("stroke-width", "5px")
   .attr("d", function (d) {return "M" + d.join("L") + "Z";})
-  .attr("clip-path", function(d,i) { return "url(#clip-"+i+")"; })
-  .attr("class", "voronoi")
-  .style("pointer-events", "none")
+  .attr("class", "voronoi vorDelete")
   .style("opacity", 0)
+  .style("display", "none");
+
+
+  d3.selectAll(".routes")
+  .transition().duration(2000).style("stroke", "black") 
+
+  contourPolys = clipVoronoi(colorKeys);
+  
+  d3.select("#voronoiG").selectAll("g.contours").data(contourPolys).enter().append("g")
+  .attr("class", "voronoi")
+  .each(function(d) {d3.select(this).selectAll("path.contours").data(d.polys).enter().append("path")
+	.style("fill", d.color)
+	.style("stroke", d.color)
+	.style("stroke-width", "2px")
+	.attr("d", function(p) {return "M" + xyToArray(p).join("L") + "Z";})
+	})
+  	.style("opacity", 0)
+	  .on("mouseover", function (d) {d3.selectAll("g.Voronoi")
+      .filter(function (p) {return p.color == d.color}).style("opacity", 1);
+  })
+  .on("mouseout", function () {d3.selectAll("g.Voronoi").style("opacity", .8);
+  })
   .transition()
   .duration(1000)
   .style("opacity", 1)
   .transition()
   .duration(1000)
-  .style("opacity", .90)
+  .style("opacity", .80);
 
-  d3.selectAll(".routes")
-  .transition().duration(2000).style("stroke", "black") 
+  d3.selectAll(".vorDelete").remove();
+  
+  function xyToArray(incArray) {
+  var newArray = []    
+    incArray.forEach(function (el) {
+      newArray.push([el.X,el.Y]);
+    })
+    return newArray;
+  }
 
+
+  if (!cartogramRunning) {
+    d3.select("#voronoiG").selectAll("path.coastlines").data(topojson.object(exposedCoast, exposedCoast.objects.coast).geometries)
+    .enter()
+    .append("path")
+    .attr("d", path)
+    .attr("class", "voronoi")
+    .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
+    .style("fill", "none")
+    .style("stroke", "black")
+    .style("pointer-events", "none")
+    .style("stroke-width", scaled(1))
+    ;
+  }
+  
 }
 
 function clearVoronoi() {
@@ -1524,5 +1591,48 @@ function clearVoronoi() {
   colorByType(true);
   d3.selectAll("g.site").selectAll("circle").style("display", "block")
   d3.selectAll("path.voronoi").remove();
+  d3.selectAll("g.voronoi").remove();
   d3.selectAll("clipPath").remove();
+}
+
+function clipVoronoi(colorValues) {
+
+  var clipType = ClipperLib.ClipType.ctUnion;
+  var fillType = 1;
+  
+  var contourPolys = [];
+  
+  colorValues.forEach(function (colorVal) {
+  cpr = new ClipperLib.Clipper();
+  var vorArray = [];
+  var solutionPath = [[]]
+  d3.selectAll("path.voronoi").filter(function (el) {return d3.select(this).style("fill") == colorVal})
+  .each(function (el) {
+  var vorSegs = d3.select(this).node().pathSegList;
+  var x = 0;
+  var newPathArray = [];
+  while (x < vorSegs.numberOfItems) {
+    var newPathSegment = {X: parseInt(vorSegs.getItem(x).x), Y: parseInt(vorSegs.getItem(x).y)};
+    if (parseInt(vorSegs.getItem(x).x)) {
+      newPathArray.push(newPathSegment);
+    }
+    x++;
+  }
+  
+  vorArray.push(newPathArray);
+  })
+
+  paths = ClipperLib.Clipper.SimplifyPolygons(vorArray, ClipperLib.PolyFillType.pftNonZero);
+//  paths = ClipperLib.Clipper.CleanPolygons(paths, 5);
+//  paths = ClipperLib.JS.Clean(paths, 5);
+
+    cpr.AddPaths(paths, ClipperLib.PolyType.ptSubject, true);
+    cpr.AddPaths([paths[0]], ClipperLib.PolyType.ptClip, true);
+    
+    var succeeded = cpr.Execute(clipType, solutionPath, fillType, fillType);
+    contourPolys.push({color: colorVal, polys: solutionPath});
+  })
+  
+  return contourPolys;
+  
 }
