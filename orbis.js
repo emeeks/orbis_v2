@@ -74,13 +74,13 @@ d3.json("topocoast.json", function(error, coast) {
 })
 
   exposedroutes = routes;
-  exposedGeoms = topojson.object(routes, routes.objects.new_routes).geometries;
+  exposedGeoms = topojson.feature(routes, routes.objects.new_routes).features;
   simplifiedGeoms = [];
   
   var routeG = svg.append("g").attr("id", "routesContainer")
 
   routeG.selectAll(".routes")
-  .data(topojson.object(routes, routes.objects.new_routes).geometries)
+  .data(topojson.feature(routes, routes.objects.new_routes).features)
   .enter()
   .append("path")
   .attr("class", "routes links")
@@ -490,6 +490,10 @@ function cartogram(centerX,centerY,centerID) {
 
 }
 
+function updateSiteLegend() {
+  d3.selectAll(".sitecirctop").filter(function(d) {return d["cost"][lastCartoRan] >= 0}).style("fill", function(d) {return cartoLegend.scale(d["cost"][lastCartoRan])})
+}
+
 function runCarto(centerX,centerY,centerID, cartoPosition) {
     lastCartoRan = cartoPosition;
   d3.selectAll("g.legendRing").remove();
@@ -505,23 +509,21 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   mid = max / 2;
 
 //  var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
-  cartoRamp=d3.scale.quantize().domain([0,max]).range(colorbrewer.Spectral[7]);
+  cartoRamp=d3.scale.quantize().domain([0,max]).range(colorbrewer.Spectral[6]);
   var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
+
   d3.selectAll("g.legend").remove();
-  var legendG = d3.select("svg").selectAll("g.legend").data(cartoRamp.range()).enter().append("g")
-  .attr("class", "legend")
-  .attr("transform", function(d, i) {return "translate(" + (300 + (i * 50)) + ",150)"})
+  cartoLegend = d3.svg.legend().cellWidth(80).cellHeight(25).inputScale(cartoRamp).cellStepping(max / 20);
+  d3.select("svg").append("g").attr("transform", "translate(250,200)").attr("class", "legend").call(cartoLegend);
+
+  d3.select("g.legend").selectAll("g")
   .on("mouseover", function (d) {d3.selectAll("g.Voronoi")
-      .filter(function (p) {return p.color == d}).style("opacity", 1);
+      .filter(function (p) {return p.color == d.color}).style("opacity", 1);
   })
   .on("mouseout", function () {d3.selectAll("g.Voronoi").style("opacity", .8);
   })
   ;
-  
-  legendG.append("rect").attr("height", 20).attr("width", 50).attr("fill", function(d) {return d});
-  legendG.append("text").style("font-size", "12px").text(function(d) {return d3.round(cartoRamp.invertExtent(d)[0],1)});
-  
-
+    
   d3.selectAll("g.site").style("display", function(d) {return d.cost[cartoPosition] == -1 ? "none" : "block"})
   d3.selectAll("path.links").style("display", function(d) {return d.properties.source.cost[cartoPosition] == -1 || d.properties.target.cost[cartoPosition] == -1 ? "none" : "block"})
   
@@ -1282,8 +1284,8 @@ var projection2 = d3.geo.mercator()
     var path2 = d3.geo.path()
     .projection(projection2);
   
-  var land = topojson.object(exposedroutes, exposedroutes.objects.new_routes)
-  var coast = topojson.object(exposedCoast, exposedCoast.objects.coast)
+  var land = topojson.feature(exposedroutes, exposedroutes.objects.new_routes)
+  var coast = topojson.feature(exposedCoast, exposedCoast.objects.coast)
   context = canvas.node().getContext("2d");
 
   context.beginPath();
@@ -1571,7 +1573,7 @@ function createVoronoi() {
 
 
   if (!cartogramRunning) {
-    d3.select("#voronoiG").selectAll("path.coastlines").data(topojson.object(exposedCoast, exposedCoast.objects.coast).geometries)
+    d3.select("#voronoiG").selectAll("path.coastlines").data(topojson.feature(exposedCoast, exposedCoast.objects.coast).features)
     .enter()
     .append("path")
     .attr("d", path)
