@@ -20,7 +20,21 @@ d3.svg.legend = function() {
     g.selectAll("text.breakLabels").text(function(d) {return labelFormat(d.stop[0])})
     updateSiteLegend();
     }
-   
+    
+    function deleteCell(valuePosition) {
+        legendValues[valuePosition - 1].stop[1] = legendValues[valuePosition].stop[1];
+        legendValues.splice(valuePosition,1);
+        redraw();
+    }
+    
+    function redraw() {
+        g.selectAll("g.legendCells").data(legendValues).exit().remove();
+        g.selectAll("g.legendCells").select("text.breakLabels").text(function(d) {return labelFormat(d.stop[0])});
+        g.selectAll("g.legendCells").select("rect").style("fill", function(d) {return d.color});
+        g.selectAll("g.legendCells").attr("transform", function(d,i) {return "translate(" + (i * cellWidth) + ",0)" });
+        g.selectAll("text.breakLabels").text(function(d) {return labelFormat(d.stop[0])});
+        
+    }
     g.selectAll("g.legendCells")
     .data(legendValues)
     .enter()
@@ -39,9 +53,11 @@ d3.svg.legend = function() {
     g.selectAll("g.legendCells")
     .append("text")
     .attr("class", "breakLabels")
-    .attr("x", 7)
+    .style("display", function(d,i) {return i == 0 ? "none" : "block"})
+    .attr("x", 0)
     .attr("y", -7)
     .style("pointer-events", "none")
+    .style("text-anchor", "middle")
     .text(function(d) {return labelFormat(d.stop[0])})
     
     g.selectAll("g.legendCells")
@@ -91,12 +107,22 @@ d3.svg.legend = function() {
     .append("circle")
     .attr("cy", cellHeight)
     .attr("r", 6)
-//    .style("display", function(d,i) {return i == 0 ? "none" : "block"})
+    .style("display", function(d,i) {return i == 0 ? "none" : "block"})
     .style("fill", "gray")
-    .style("display", "none")
     .style("stroke", "black")
     .style("cursor", "pointer")
-    .style("stroke-width", "1px");    
+    .style("stroke-width", "1px")
+    .on("click", function(d,i) {deleteCell(i)});
+    
+    g.selectAll("g.legendCells")
+    .append("text")
+    .style("pointer-events", "none")
+    .style("font-weight", 900)
+    .style("display", function(d,i) {return i == 0 ? "none" : "block"})
+    .attr("y", cellHeight + 4)
+    .style("text-anchor", "middle")
+    .text("x");
+    
     }
     
     legend.inputScale = function(newScale) {

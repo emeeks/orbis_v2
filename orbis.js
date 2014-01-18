@@ -509,12 +509,12 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   mid = max / 2;
 
 //  var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
-  cartoRamp=d3.scale.quantize().domain([0,max]).range(colorbrewer.Spectral[6]);
+  cartoRamp=d3.scale.quantize().domain([0,max]).range(colorbrewer.Spectral[8]);
   var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
 
   d3.selectAll("g.legend").remove();
-  cartoLegend = d3.svg.legend().cellWidth(80).cellHeight(25).inputScale(cartoRamp).cellStepping(max / 20);
-  d3.select("svg").append("g").attr("transform", "translate(250,200)").attr("class", "legend").call(cartoLegend);
+  cartoLegend = d3.svg.legend().cellWidth(80).cellHeight(25).inputScale(cartoRamp).cellStepping(max / 50);
+  d3.select("svg").append("g").attr("transform", "translate(250,150)").attr("class", "legend").call(cartoLegend);
 
   d3.select("g.legend").selectAll("g")
   .on("mouseover", function (d) {d3.selectAll("g.Voronoi")
