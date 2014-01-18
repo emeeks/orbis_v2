@@ -9,6 +9,7 @@
   refreshSet = 0;
   currentRoute = 0;
   lastCartoRan = 0;
+  priorityName = ["Days", "Denarii", "KM"]
 
 var typeHash = {road: "brown", overseas: "green", coastal: "#5CE68A", upstream: "blue", downstream: "blue", ferry: "purple"}
 
@@ -46,9 +47,15 @@ projection
     .translate([0, 0]);
 
 svg = d3.select("#vizcontainer").append("svg")
+    .attr("id", "mapSVG")
     .attr("width", "100%")
     .attr("height", "100%")
     .on("click", function() {d3.select(".modal").style("display", "none")});
+
+svgTimeline = d3.select("#timelineViz").append("svg")
+    .attr("id", "timelineSVG")
+    .attr("width", "100%")
+    .attr("height", "100%");
 
 var raster = svg.append("g");
 
@@ -285,7 +292,7 @@ function zoomed() {
 
   d3.selectAll(".results").style("display", "none")
   d3.selectAll(".modal").style("display", "none");
-  d3.selectAll(".results").style("stroke", "white")
+//  d3.selectAll(".results").style("stroke", "white")
 
 	clearTimeout(refreshTimer);
 	refreshTimer = setTimeout('zoomComplete()', 100);
@@ -513,7 +520,7 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
 
   d3.selectAll("g.legend").remove();
-  cartoLegend = d3.svg.legend().cellWidth(80).cellHeight(25).inputScale(cartoRamp).cellStepping(max / 50);
+  cartoLegend = d3.svg.legend().units(priorityName[cartogramsRun[cartoPosition].priority]).cellWidth(80).cellHeight(25).inputScale(cartoRamp).cellStepping(max / 50);
   d3.select("svg").append("g").attr("transform", "translate(250,150)").attr("class", "legend").call(cartoLegend);
 
   d3.select("g.legend").selectAll("g")
@@ -716,7 +723,9 @@ function calculateRoute() {
     .style("opacity", 0)
     .style("cursor", "pointer")
     .on("click", routeClick)
-    .transition()
+  .on("mouseover", resultsOver)
+  .on("mouseout", resultsOut)
+  .transition()
     .duration(1000)
     .style("opacity", 1)
 
@@ -785,9 +794,6 @@ function routeClick(d,i) {
   d3.event.stopPropagation();
   var coords = d3.mouse(document.body);
   var modalContents = d3.select("#sitemodal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
-  
-  modalContents.append("div").attr("class", "routeArrowLeftUnder");
-  modalContents.append("div").attr("class", "routeArrowLeft");
   modalContents.append("p").html(d.properties.segment_type + " route from " + d.properties.source.label + " to " + d.properties.target.label)
   modalContents.append("p").html("Duration: " + d.properties.segmentduration);
   modalContents.append("p").html("Length: " + d.properties.segmentlength);
@@ -816,6 +822,8 @@ function populateRouteDialogue(inSource,inTarget,inRouteID) {
 //  .style("stroke-width", function(d) {return (d.properties.routeID == inRouteID ? 3 : 9 ) + "px"})
   .style("stroke", function(d) {return d.properties.routeID == inRouteID ? "black" : "white"})
 
+  drawTimeline(d3.selectAll(".results").filter(function(d) {return d.properties.routeID == inRouteID}))
+  
   var routeModalContents = d3.select("#routeResults").style("display", "block").style("padding", "0").style("width", "0px").html('')
   var segmentNumber = routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}).length;
   var durationSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentduration})
@@ -1637,4 +1645,80 @@ function clipVoronoi(colorValues) {
   
   return contourPolys;
   
+}
+
+function drawTimeline(selectedRoutes) {
+  d3.selectAll(".timelineRoutes").remove();
+  d3.selectAll("g.timelineSites").remove()
+  var timelineRoutes = [];
+  selectedRoutes.each(function(d) {
+    timelineRoutes.push(d);
+    console.log(d);
+  })
+  
+  d3.select("#timelineViz").style("display", "block")
+  var canvWidth = parseInt(d3.select("#timelineSVG").style("width"));
+  var canvHeight = parseInt(d3.select("#timelineSVG").style("height"));
+  var canvMargin = 20;
+  
+  var xMin = d3.min(timelineRoutes, function(d) {return d3.min(d.coordinates, function(p) {return p[0]})});
+  var xMax = d3.max(timelineRoutes, function(d) {return d3.max(d.coordinates, function(p) {return p[0]})});
+  var yMin = d3.min(timelineRoutes, function(d) {return d3.min(d.coordinates, function(p) {return p[1]})});
+  var yMax = d3.max(timelineRoutes, function(d) {return d3.max(d.coordinates, function(p) {return p[1]})});
+  
+  var roughXScale = d3.scale.linear().domain([xMin,xMax]).range([(canvMargin * 3), canvWidth - (canvMargin * 3)]);
+  var roughYScale = d3.scale.linear().domain([yMax,yMin]).range([canvMargin, canvHeight - canvMargin]);
+
+  if (yMax - yMin > xMax - xMin) {
+  roughXScale = d3.scale.linear().range([canvMargin, canvHeight - canvMargin]);
+  roughYScale = d3.scale.linear().range([(canvMargin * 4), canvWidth - (canvMargin * 4)]);
+  }
+
+  var roughLineConstructor = d3.svg.line()
+  .x(function(d) {return roughXScale(d[0])})
+  .y(function(d) {return roughYScale(d[1])});
+  
+  d3.select("#timelineSVG").selectAll("path.timelineRoutes").data(timelineRoutes).enter().append("path")
+  .style("fill", "none")
+  .style("stroke", function(d) {return typeHash[d.properties.segment_type]})
+  .style("stroke-width", "4px")
+  .attr("class", "timelineRoutes")
+  .attr("d", function(d) {return roughLineConstructor(d.coordinates)})
+  .on("mouseover", resultsOver)
+  .on("mouseout", resultsOut);
+  
+  var timelineSites = []
+  timelineRoutes.forEach(function (el) {
+    if (timelineSites.indexOf(el.properties.source) == -1) {
+      timelineSites.push(el.properties.source);
+    }
+    if (timelineSites.indexOf(el.properties.target) == -1) {
+      timelineSites.push(el.properties.target);
+    }
+  })
+  //to get the extra site, we need to duplicate first site
+  timelineRoutes.push(timelineRoutes[timelineRoutes.length - 1])
+  console.log(timelineRoutes)
+  
+  d3.select("#timelineSVG")
+  .selectAll("g.timelineSites").data(timelineSites).enter().append("g")
+  .attr("class", "timelineSites")
+  .attr("transform", function(d) {return "translate(" + roughXScale(d.x) + "," + roughYScale(d.y) + ")"})
+  .on("mouseover", function() {d3.select(this).select("text").style("display", "block")})
+  .on("mouseout", function() {d3.select(this).select("text").style("display", "none")});
+  
+  d3.selectAll("g.timelineSites").append("circle").style("fill", "#ad5041").style("stroke", "black").style("stroke-width", "1px").attr("r", 4);
+  
+  d3.selectAll("g.timelineSites").append("text").style("pointer-events", "none").style("y", -5).style("display", "none").style("text-anchor", "middle").style("font-weight", 900).text(function(d) {return d.label})
+  
+}
+
+function resultsOver(d) {
+  d3.selectAll(".timelineRoutes").filter(function(p) {return p.properties.segment_id == d.properties.segment_id}).style("stroke-width", "8px");
+  d3.selectAll(".results").filter(function(p) {return p.properties.segment_id == d.properties.segment_id}).style("stroke", "red")
+}
+
+function resultsOut(d) {
+  d3.selectAll(".timelineRoutes").style("stroke-width", "4px");
+  d3.selectAll(".results").filter(function(p) {return p.properties.segment_id == d.properties.segment_id}).style("stroke", "black")
 }

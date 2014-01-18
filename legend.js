@@ -33,7 +33,7 @@ d3.svg.legend = function() {
         g.selectAll("g.legendCells").select("rect").style("fill", function(d) {return d.color});
         g.selectAll("g.legendCells").attr("transform", function(d,i) {return "translate(" + (i * cellWidth) + ",0)" });
         g.selectAll("text.breakLabels").text(function(d) {return labelFormat(d.stop[0])});
-        
+        updateSiteLegend();
     }
     g.selectAll("g.legendCells")
     .data(legendValues)
@@ -123,6 +123,10 @@ d3.svg.legend = function() {
     .style("text-anchor", "middle")
     .text("x");
     
+    g.append("text")
+    .text(labelUnits)
+    .attr("y", -7);
+    
     }
     
     legend.inputScale = function(newScale) {
@@ -172,6 +176,12 @@ d3.svg.legend = function() {
     legend.cellStepping = function(incStep) {
         if (!arguments.length) return changeValue;
             changeValue = incStep;
+            return this;
+    }
+    
+    legend.units = function(incUnits) {
+        if (!arguments.length) return labelUnits;
+            labelUnits = incUnits;
             return this;
     }
 
