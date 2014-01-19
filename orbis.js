@@ -82,7 +82,7 @@ d3.json("topocoast.json", function(error, coast) {
 
   exposedroutes = routes;
   exposedGeoms = topojson.feature(routes, routes.objects.new_routes).features;
-  simplifiedGeoms = [];
+
   
   var routeG = svg.append("g").attr("id", "routesContainer")
 
@@ -100,16 +100,7 @@ d3.json("topocoast.json", function(error, coast) {
 	d3.select(this).transition().duration(500).style("stroke-opacity", .5);
 	});
 
-      d3.selectAll("path.routes").each(function(d,i) {
-      var segLength = d3.select(this).node().getTotalLength();
-	var simplifiedObject = {coordinates: [], type:"LineString", id: d.id, properties: d.properties};
-      for (x=0;x<=1;x+=.1) {
-	var segPoint = d3.select(this).node().getPointAtLength(segLength * x);
-	var segPointProjected = projection.invert([segPoint.x,segPoint.y])
-	simplifiedObject.coordinates.push([segPointProjected[0],segPointProjected[1]]);	
-	}
-	simplifiedGeoms.push(simplifiedObject);
-	})
+simplifiedGeoms = simplifyLines(d3.selectAll("path.routes"));
 
   routeG.selectAll(".routes")
   .data(simplifiedGeoms)
@@ -268,8 +259,8 @@ function startUp() {
   .html(function(d) {return d.l})
   .attr("value", function(d,i) {return d.v})
   
-  document.getElementById("targetSelectButton").value = 50327;
-  document.getElementById("sourceSelectButton").value = 50235;
+  document.getElementById("sourceSelectButton").value = 50327;
+  document.getElementById("targetSelectButton").value = 50550;
 
 }
 
@@ -1653,8 +1644,10 @@ function drawTimeline(selectedRoutes) {
   var timelineRoutes = [];
   selectedRoutes.each(function(d) {
     timelineRoutes.push(d);
-    console.log(d);
   })
+
+//  var timelineRoutes = simplifyLines(selectedRoutes)
+//  console.log(timelineRoutes)
   
   d3.select("#timelineViz").style("display", "block")
   var canvWidth = parseInt(d3.select("#timelineSVG").style("width"));
@@ -1667,6 +1660,7 @@ function drawTimeline(selectedRoutes) {
   var yMax = d3.max(timelineRoutes, function(d) {return d3.max(d.coordinates, function(p) {return p[1]})});
   
   var roughXScale = d3.scale.linear().domain([xMin,xMax]).range([(canvMargin * 3), canvWidth - (canvMargin * 3)]);
+  var roughDistortedXScale = d3.scale.linear().domain([xMin,xMax]).range([(canvMargin * 3), canvWidth - (canvMargin * 3)]).nice();
   var roughYScale = d3.scale.linear().domain([yMax,yMin]).range([canvMargin, canvHeight - canvMargin]);
 
   if (yMax - yMin > xMax - xMin) {
@@ -1677,13 +1671,17 @@ function drawTimeline(selectedRoutes) {
   var roughLineConstructor = d3.svg.line()
   .x(function(d) {return roughXScale(d[0])})
   .y(function(d) {return roughYScale(d[1])});
+
+  var roughDistortedLineConstructor = d3.svg.line()
+  .x(function(d) {return roughDistortedXScale(d[0])})
+  .y(function(d) {return roughYScale(d[1])});
   
   d3.select("#timelineSVG").selectAll("path.timelineRoutes").data(timelineRoutes).enter().append("path")
   .style("fill", "none")
   .style("stroke", function(d) {return typeHash[d.properties.segment_type]})
+  .attr("d", "M1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1L1,1")
   .style("stroke-width", "4px")
   .attr("class", "timelineRoutes")
-  .attr("d", function(d) {return roughLineConstructor(d.coordinates)})
   .on("mouseover", resultsOver)
   .on("mouseout", resultsOut);
   
@@ -1696,20 +1694,119 @@ function drawTimeline(selectedRoutes) {
       timelineSites.push(el.properties.target);
     }
   })
-  //to get the extra site, we need to duplicate first site
-  timelineRoutes.push(timelineRoutes[timelineRoutes.length - 1])
-  console.log(timelineRoutes)
-  
+
   d3.select("#timelineSVG")
   .selectAll("g.timelineSites").data(timelineSites).enter().append("g")
   .attr("class", "timelineSites")
-  .attr("transform", function(d) {return "translate(" + roughXScale(d.x) + "," + roughYScale(d.y) + ")"})
   .on("mouseover", function() {d3.select(this).select("text").style("display", "block")})
   .on("mouseout", function() {d3.select(this).select("text").style("display", "none")});
   
   d3.selectAll("g.timelineSites").append("circle").style("fill", "#ad5041").style("stroke", "black").style("stroke-width", "1px").attr("r", 4);
   
   d3.selectAll("g.timelineSites").append("text").style("pointer-events", "none").style("y", -5).style("display", "none").style("text-anchor", "middle").style("font-weight", 900).text(function(d) {return d.label})
+  timelineBy("perspective");
+  d3.select("#tlbPerspective").on("click", function() {timelineBy("perspective");})
+  d3.select("#tlbDuration").on("click", function() {timelineBy("duration");})
+  d3.select("#tlbExpensed").on("click", function() {timelineBy("expensed");})
+  d3.select("#tlbExpensew").on("click", function() {timelineBy("expensew");})
+  d3.select("#tlbExpensec").on("click", function() {timelineBy("expensec");})
+  d3.select("#tlbDistance").on("click", function() {timelineBy("distance");})
+  
+  function timelineBy(distortionType) {
+    d3.select("#tlAxis").remove();
+
+    if (distortionType == "perspective") {
+      d3.selectAll("g.timelineSites")
+      .transition()
+      .duration(1000)
+      .attr("transform", function(d) {return "translate(" + roughXScale(d.x) + "," + roughYScale(d.y) + ")"})
+     
+     d3.selectAll("path.timelineRoutes")
+      .transition()
+      .duration(1000)
+       .attr("d", function(d) {return roughLineConstructor(d.coordinates)})
+      return;
+    }
+      var totalTime = timelineRoutes.reduce(function(a,b) {return a + b.properties.segmentduration},0);
+      var totalLength = timelineRoutes.reduce(function(a,b) {return a + b.properties.segmentlength},0);
+      var totalCostD = timelineRoutes.reduce(function(a,b) {return a + b.properties.segmentexpense_d},0);
+      var totalCostW = timelineRoutes.reduce(function(a,b) {return a + b.properties.segmentexpense_w},0);
+      var totalCostC = timelineRoutes.reduce(function(a,b) {return a + b.properties.segmentexpense_c},0);
+    
+    if (distortionType == "duration") {
+      roughDistortedXScale.domain([0,totalTime]);
+      propType = "segmentduration"
+    }
+    if (distortionType == "distance") {
+      roughDistortedXScale.domain([0,totalLength]);
+      propType = "segmentlength"
+ 
+     }
+    if (distortionType == "expensed") {
+      roughDistortedXScale.domain([0,totalCostD]);
+      propType = "segmentexpense_d";
+    }
+    if (distortionType == "expensew") {
+      roughDistortedXScale.domain([0,totalCostW]);
+      propType = "segmentexpense_w";
+    }
+    if (distortionType == "expensec") {
+      roughDistortedXScale.domain([0,totalCostC]);
+      propType = "segmentexpense_c";
+    }
+
+      var tlAxis = d3.svg.axis().scale(roughDistortedXScale).orient("bottom").tickSize(-60).ticks(8).tickSubdivide(true);    
+      d3.select("#timelineSVG").insert("g", "path").attr("transform", "translate(0,80)").attr("id", "tlAxis").call(tlAxis);
+      d3.select("#tlAxis").selectAll("path").style("stroke", "black")
+      d3.select("#tlAxis").selectAll("line").style("stroke", "black").style("stroke-width", "1px")
+      d3.select("#tlAxis").selectAll("line.minor").style("stroke", "gray").style("stroke-width", "1px").style("stroke-dasharray", "5 5")
+      //.style("fill", "darkgray")
+
+    var steppingPoint = siteHash[routesRun[0].source];
+      var currentCost = 0;
+      var moreRoutes = true;
+      var calculatedRoutes = [];
+      var i = 0
+      while (moreRoutes && i < 1000) {
+	for (x in timelineRoutes) {
+//	    console.log(timelineRoutes[x])
+	  if (calculatedRoutes.indexOf(timelineRoutes[x]) == -1) {
+	    if (timelineRoutes[x].properties.source == timelineRoutes[x].properties.target) {
+	      calculatedRoutes.push(timelineRoutes[x]);	      
+	    }
+	    else if (timelineRoutes[x].properties.source == steppingPoint) {
+	      steppingPoint.tlCost = currentCost;
+	      currentCost += timelineRoutes[x].properties[propType];
+	      steppingPoint = timelineRoutes[x].properties.target;
+	      calculatedRoutes.push(timelineRoutes[x]);
+	    }
+	    else if (timelineRoutes[x].properties.target == steppingPoint) {
+	      steppingPoint.tlCost = currentCost;
+	      currentCost += timelineRoutes[x].properties[propType];
+	      steppingPoint = timelineRoutes[x].properties.source;
+	      calculatedRoutes.push(timelineRoutes[x]);
+	    }
+	  }
+	}
+	  if (calculatedRoutes.length == timelineRoutes.length) {
+	      steppingPoint.tlCost = currentCost;
+	    moreRoutes = false;
+	  }
+	  i++;
+      }
+      
+      d3.selectAll("g.timelineSites")
+      .transition()
+      .duration(1000)
+      .attr("transform", function(d) {return "translate(" + roughDistortedXScale(d.tlCost) + "," + roughYScale(d.y) + ")"});
+
+     d3.selectAll("path.timelineRoutes")
+      .transition()
+      .duration(1000)
+      .attr("d", function(d) {return roughDistortedLineConstructor([[d.properties.source.tlCost,d.properties.source.y],[d.properties.target.tlCost,d.properties.target.y]])})
+      return;
+    
+  }
   
 }
 
@@ -1721,4 +1818,19 @@ function resultsOver(d) {
 function resultsOut(d) {
   d3.selectAll(".timelineRoutes").style("stroke-width", "4px");
   d3.selectAll(".results").filter(function(p) {return p.properties.segment_id == d.properties.segment_id}).style("stroke", "black")
+}
+
+function simplifyLines(selectedLines) {
+      var simpleGeom = [];
+      selectedLines.each(function(d,i) {
+      var segLength = d3.select(this).node().getTotalLength();
+	var simplifiedObject = {coordinates: [], type:"LineString", id: d.id, properties: d.properties};
+      for (x=0;x<=1;x+=.1) {
+	var segPoint = d3.select(this).node().getPointAtLength(segLength * x);
+	var segPointProjected = projection.invert([segPoint.x,segPoint.y])
+	simplifiedObject.coordinates.push([segPointProjected[0],segPointProjected[1]]);	
+	}
+	simpleGeom.push(simplifiedObject);
+	})
+      return simpleGeom;
 }

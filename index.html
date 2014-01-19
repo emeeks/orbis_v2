@@ -142,7 +142,16 @@
         </table>
       </div>
     </div>
-  <div id="timelineViz"></div>
+  <div id="timelineViz">
+    <button id="tlbPerspective" style="position:absolute;z-index: 1;top:-15px;left:20px;" >Perspective</button>
+    <button id="tlbDuration" style="position:absolute;z-index: 1;top:-15px;left:120px;" >Duration</button>
+    <button id="tlbDistance" style="position:absolute;z-index: 1;top:-15px;left:220px;" >Distance</button>
+    <button id="tlbExpensed" style="position:absolute;z-index: 1;top:-15px;left:320px;" >Expense (D)</button>
+    <button id="tlbExpensew" style="position:absolute;z-index: 1;top:-15px;left:420px;" >Expense (W)</button>
+    <button id="tlbExpensec" style="position:absolute;z-index: 1;top:-15px;left:520px;" >Expense (C)</button>
+    <button id="tlbDistance" style="position:absolute;z-index: 1;top:-15px;left:620px;" onclick="d3.select('#timelineViz').style('display','none');" >Close Timeline</button>
+
+  </div>
 
   <footer>
     <script src="o_settings.js" type="text/javascript">
