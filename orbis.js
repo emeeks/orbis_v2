@@ -52,11 +52,6 @@ svg = d3.select("#vizcontainer").append("svg")
     .attr("height", "100%")
     .on("click", function() {d3.select(".modal").style("display", "none")});
 
-svgTimeline = d3.select("#timelineViz").append("svg")
-    .attr("id", "timelineSVG")
-    .attr("width", "100%")
-    .attr("height", "100%");
-
 var raster = svg.append("g");
 
 var brushG = svg.append("g")
@@ -1713,7 +1708,6 @@ function drawTimeline(selectedRoutes) {
   d3.select("#tlbDistance").on("click", function() {timelineBy("distance");})
   
   function timelineBy(distortionType) {
-    d3.select("#tlAxis").remove();
 
     if (distortionType == "perspective") {
       d3.selectAll("g.timelineSites")
@@ -1756,7 +1750,7 @@ function drawTimeline(selectedRoutes) {
     }
 
       var tlAxis = d3.svg.axis().scale(roughDistortedXScale).orient("bottom").tickSize(-60).ticks(8).tickSubdivide(true);    
-      d3.select("#timelineSVG").insert("g", "path").attr("transform", "translate(0,80)").attr("id", "tlAxis").call(tlAxis);
+      d3.select("#tlAxis").transition().duration(1000).call(tlAxis);
       d3.select("#tlAxis").selectAll("path").style("stroke", "black")
       d3.select("#tlAxis").selectAll("line").style("stroke", "black").style("stroke-width", "1px")
       d3.select("#tlAxis").selectAll("line.minor").style("stroke", "gray").style("stroke-width", "1px").style("stroke-dasharray", "5 5")
