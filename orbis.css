@@ -11,6 +11,22 @@ path {
   stroke-width: 1.5px;
 }
 
+button {
+  cursor: pointer;
+  background: #D6E0EB;
+}
+
+button:hover {
+  background:#FFDBDB;
+}
+
+button.active {
+  background: #FFD699;
+}
+
+button.disabled {
+  background: #9494B8;
+}
 #controlbar {
   height:100px;
 }
@@ -33,6 +49,7 @@ path {
   border: solid 2px lightgray;
   display: none;
   padding: 10px 20px;
+  max-width: 400px;
 }
 
 .tutorial {
@@ -64,6 +81,17 @@ path {
   background: white;
   border: solid 2px lightgray;
   padding: 0 20px;
+}
+
+#legendmodal {
+  right:10px;
+  bottom:100px;
+  top:auto;
+  height:80px;
+  width:650px;
+  left:auto;
+  display:none;
+  
 }
 
 #infoclosebutton {
@@ -174,22 +202,6 @@ opacity: 1;
   background: #F0F0F0;
   float: left;
   position: relative;
-}
-
-.controlButton {
-  cursor:pointer;
-}
-
-.controlButton:hover {
-  background:pink;
-}
-
-.controlButton.active {
-  background: orange;
-}
-
-.controlButton.disabled {
-  background: lightgray;
 }
 
 .routeArrowLeftUnder {

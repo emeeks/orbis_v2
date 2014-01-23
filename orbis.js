@@ -9,7 +9,10 @@
   refreshSet = 0;
   currentRoute = 0;
   lastCartoRan = 0;
-  priorityName = ["Days", "Denarii", "KM"]
+  priorityName = ["Days", "Denarii", "KM"];
+  var monthNames = [ "Zeroary", "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December" ];
+  settingsID = 0;
 
 var typeHash = {road: "brown", overseas: "green", coastal: "#5CE68A", upstream: "blue", downstream: "blue", ferry: "purple"}
 
@@ -150,7 +153,7 @@ d3.csv("sites.csv", function(error, sites) {
   .style("cursor", "pointer")
   .on("click", siteClick)
   .on("mouseover", siteOver)
-  .on("mouseover", siteOut)
+  .on("mouseout", siteOut)
   .each(function(d) {
     d.cartoTranslate = "translate(" + projection([d.x,d.y]) + ")scale(" + projection.scale() + ")";
   });
@@ -272,6 +275,8 @@ function zoomComplete() {
 }
 
 function zoomed() {
+    var downloadButton = d3.select("#svgDownload").style("display", "none");
+
   if (voronoiRunning == true) {
     clearVoronoi();
   }
@@ -360,8 +365,8 @@ function siteClick(d,i) {
   var modalContents = d3.select("#sitemodal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
   
   modalContents.append("p").html(d.label)
-    modalContents.append("p").attr("id","showLabelButton").style("display","none").html("<button onclick='siteLabel(\"site_g_"+d.id+"\")'>Display Site Label</button>")
-    modalContents.append("p").attr("id","hideLabelButton").style("display","none").html("<button onclick='removeSiteLabel(\"site_g_"+d.id+"\")'>Remove Site Label</button>")
+    modalContents.append("p").attr("id","showLabelButton").style("display","none").html("<button onclick='siteLabel(\"site_g_"+d.id+"\")'>Display Label</button>")
+    modalContents.append("p").attr("id","hideLabelButton").style("display","none").html("<button onclick='removeSiteLabel(\"site_g_"+d.id+"\")'>Remove Label</button>")
 
   if (d3.select("#site_g_"+d.id).selectAll("text").empty()) {
     d3.select("#showLabelButton").style("display","block")
@@ -369,18 +374,36 @@ function siteClick(d,i) {
   else {
     d3.select("#hideLabelButton").style("display","block")
   }
-  modalContents.append("p").html("<button id='incExcButton'>" + (excludedSites.indexOf(d.id) > -1 ? "Include" : "Exclude") + "</button>").on("click", function() {onOffSite(d)})
-  modalContents.append("p").html("<button onclick='d3.select(this).remove();cartogram("+d.x+","+d.y+","+d.id+")'>Cartogram</button>")
+  modalContents.append("p").html("<button id='incExcButton'>" + (excludedSites.indexOf(d.id) > -1 ? "Include Site" : "Exclude Site") + "</button>").on("click", function() {onOffSite(d)})
+  modalContents.append("p").html("<button onclick='d3.select(this).remove();cartogram("+d.id+")'>Cartogram</button>")
   var costList = modalContents.append("ol")
   costList.selectAll("li").data(d.cost).enter().append("li").html(function(p) {return p});
 }
 
 function siteOver(d,i) {
-  d3.select("#site_g_"+d.id+"_label").transition().duration(500).style("stroke-width", scaled(75))
+//  d3.select("#site_g_"+d.id+"_label").transition().duration(500).style("stroke-width", scaled(75))
+  
+  d3.select("#site_g_"+d.id).append('text').attr("class","hoverlabel").text(d.label)
+  .attr("x", scaled(2))
+  .attr("y", scaled(-60))
+  .attr("font-size", scaled(100))
+  .attr("text-anchor", "middle")
+  .style("stroke-width", scaled(25))
+  .style("stroke", "white")
+  .style("opacity", .75)
+  .style("pointer-events","none");
+  d3.select("#site_g_"+d.id).append('text').attr("class","hoverlabel").text(d.label)
+  .attr("x", scaled(2))
+  .attr("y", scaled(-60))
+  .attr("font-size", scaled(100))
+  .attr("text-anchor", "middle")
+  .style("pointer-events","none")
+  .style("stroke", "none");
 }
 
 function siteOut(d,i) {
-  d3.select("#site_g_"+d.id+"_label").transition().duration(500).style("stroke-width", scaled(25))
+//  d3.select("#site_g_"+d.id+"_label").transition().duration(500).style("stroke-width", scaled(25));
+  d3.selectAll(".hoverlabel").remove();
 }
 
 function siteLabel(siteID) {
@@ -448,10 +471,11 @@ function aquaticOptions(button) {
   
 }
 
-function cartogram(centerX,centerY,centerID) {
+function cartogram(centerID) {
   
 
-  
+  var centerX = siteHash[centerID].x;
+  var centerY = siteHash[centerID].y;
   
   var newSettings = getSettings();
   newSettings["centerID"] = centerID;
@@ -507,7 +531,8 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
 
   d3.selectAll("g.legend").remove();
   cartoLegend = d3.svg.legend().units(priorityName[cartogramsRun[cartoPosition].priority]).cellWidth(80).cellHeight(25).inputScale(cartoRamp).cellStepping(max / 50);
-  d3.select("svg").append("g").attr("transform", "translate(250,150)").attr("class", "legend").call(cartoLegend);
+  d3.select('#legendmodal').style('display','block');
+  d3.select("#legendSVG").append("g").attr("transform", "translate(0,30)").attr("class", "legend").call(cartoLegend);
 
   d3.select("g.legend").selectAll("g")
   .on("mouseover", function (d) {d3.selectAll("g.Voronoi")
@@ -771,8 +796,8 @@ function getSettings() {
   modeList = modeArray.join("");
   
   var excludedIDs = excludedSites.toString();
-  
- return {modes: modeList, modeArr: modeArray, source: sourceID, target: targetID, month: monthID, priority: priority, vehicle: vehicleType, transfer: transferCost, excluded: excludedIDs}
+  settingsID++;
+ return {id: settingsID, modes: modeList, modeArr: modeArray, source: sourceID, target: targetID, month: monthID, priority: priority, vehicle: vehicleType, transfer: transferCost, excluded: excludedIDs}
   
 }
 
@@ -832,8 +857,8 @@ function populateRouteDialogue(inSource,inTarget,inRouteID) {
 function onOffSite(d, forceChange) {
   if (excludedSites.indexOf(d.id) > -1 && forceChange != "off") {
     d3.select("#sct" + d.id).style("opacity", 1)
-    excludedSites = excludedSites.filter(function (el) {return el != d.id && el != "1" +d.id+ "" && el != "2" +d.id+ "" && el != "3" +d.id+ "" && el != "4" +d.id+ ""})
-    d3.select("#incExcButton").html("Exclude")
+    excludedSites = excludedSites.filter(function (el) {return el != d.id && el.length == 5})
+    d3.select("#incExcButton").html("Exclude Site")
   }
   else if (excludedSites.indexOf(d.id) == -1 && forceChange != "on") {
     d3.select("#sct" + d.id).style("opacity", .5)
@@ -843,13 +868,20 @@ function onOffSite(d, forceChange) {
     excludedSites.push("2" +d.id+ "")
     excludedSites.push("3" +d.id+ "")
     excludedSites.push("4" +d.id+ "")
-    d3.select("#incExcButton").html("Include")
+    d3.select("#incExcButton").html("Include Site")
   }
 }
 
 function clusterSitesUI() {  
-  var modalContents = d3.select("#sitemodal").style("display", "block").style("left", "200px").style("top", "200px").html('')
+  d3.select("#clustermodal").style("display", "block").style("left", "200px").style("top", "200px");
+  var modalContents = d3.select("#clustercontent").html('');
   modalContents.append("h2").html("Cluster Settings")
+  modalContents.append("p").html("Clustering will label the sites to indicate which cartogram center is closest according to the cartograms you've run. You can only cluster based on the same priority.")
+  
+  if(cartogramsRun.length == 0) {
+    modalContents.append("p").style("font-weight", 600).html("You have not run any cartograms. For clustering to be available, you need to run some cartograms by clicking on a site and clicking the Cartogram button.");
+    return;
+  }
   
   var newSelector = modalContents.append("select").attr("id","clusterPrioritySelector").on("change", updateClusterUIList)
   
@@ -864,35 +896,40 @@ function clusterSitesUI() {
   
   var aCLI = availableCartos.selectAll("li").data(cartogramsRun).enter().append("li")
   .attr("class", "availCartos")
-  
+
   aCLI.append("span")
-  .html(function(d) {return "" + d.centerID})
+  .html(function(d) {return siteHash[d.centerID].label + " via " + d.vehicle + " in " + monthNames[d.month]})
 
   aCLI.append("input")
   .attr("type", "checkbox")
   .attr("class", "cartoOpt")
-  .attr("checked", true)
-  .attr("value", function(d) {return d.centerID});
+  .attr("value", function(d) {return d.id});
+
 
   d3.selectAll(".availCartos")
   .style("display", function(p,q) {return 0 == p.priority ? "block" : "none"})
   
   modalContents.append("p").append("button").on("click", clusterSites).html("Cluster")
-  modalContents.append("p").append("button").on("click", drawBorders).html("Borders")
+  modalContents.append("p").append("button").on("click", exportCartoCSV).html("Export to CSV")
+  modalContents.append("p").append("a").attr("id", "downloadButton").style("display", "none").html("Download as CSV")
+
+  d3.selectAll(".cartoOpt")
+  .property("checked", function(p,q) {return 0 == p.priority ? true : false})
 }
 
 function updateClusterUIList () {
   var selectorVal = this.value;
   d3.selectAll(".availCartos")
-  .style("display", function(p,q) {return selectorVal == p.priority ? "block" : "none"})
+  .style("display", function(p,q) {return selectorVal == p.priority ? "block" : "none"});
+  d3.selectAll(".cartoOpt")
+  .property("checked", function(p,q) {return selectorVal == p.priority ? true : false})
+
 }
 
 function clusterSites() {
   var clusterFilter = document.getElementById("clusterPrioritySelector").value;
-  activeCenters = [];
+  activeCenters = activeCenter();
   matchedCartos = [];
-
-  d3.selectAll(".cartoOpt").each(function() {this.checked ? activeCenters.push(parseInt(this.value)) : null})
   
   if (activeCenters.length == 0) {
     return;
@@ -901,8 +938,9 @@ function clusterSites() {
   for (x in exposedsites) {
     if (exposedsites[x]) {
       var maxVal = 1000;
+      exposedsites[x].nearestCluster = 9999;
       for (y in exposedsites[x]["cost"]) {
-        if (activeCenters.indexOf(cartogramsRun[y].centerID) > -1 && cartogramsRun[y].priority == clusterFilter && parseFloat(exposedsites[x]["cost"][y]) < maxVal && parseInt(exposedsites[x]["cost"][y]) != -1) {
+        if (activeCenters.indexOf(""+y) > -1 && cartogramsRun[y].priority == clusterFilter && parseFloat(exposedsites[x]["cost"][y]) < maxVal && parseInt(exposedsites[x]["cost"][y]) != -1) {
           exposedsites[x]["nearestCluster"] = y;
           maxVal = parseFloat(exposedsites[x]["cost"][y]);
         }
@@ -924,10 +962,15 @@ function clusterSites() {
   
   clusterOrdinal = d3.scale.category20().domain(matchedCartos)
   
-    svg.selectAll(".sitecirctop")
+    svg.selectAll(".sitecirctop").filter(function(d) {return d.nearestCluster < 1000})
   .transition()
   .duration(3000)
   .style("fill", function(d) { return d.cost[d["nearestCluster"]] == 0 ? "cyan" : (clusterOrdinal(d["nearestCluster"]))});
+
+  svg.selectAll(".sitecirctop").filter(function(d) {return d.nearestCluster > 1000})
+  .transition()
+  .duration(3000)
+  .style("fill", "lightgray");
   
   d3.select("#hullButton").style("display","block")
 }
@@ -1380,7 +1423,7 @@ function formatSettings(incSettings, targetSelection, imgUrl) {
 
   
   var newRow = d3.select("#recTableActual").append("tr").attr("class", incSettings.centerID ? "cartoRow resultsRow" : "routeRow resultsRow");
-    
+
   newRow.append("td").html(siteHash[incSettings.source].label)
   newRow.append("td").html(incSettings.centerID ? "Cartogram" : siteHash[incSettings.target].label)
   newRow.append("td").html(incSettings.priority)
@@ -1446,9 +1489,10 @@ function brushed() {
   
   var currentExtent = brush.extent();
   var filteredSelection = d3.selectAll("g.site").filter(function(el) {
+    var displayed = d3.select(this).style("display");
     var thisX = (d3.transform(d3.select(this).attr("transform")).translate[0] * zoom.scale()) + zoom.translate()[0];
     var thisY = (d3.transform(d3.select(this).attr("transform")).translate[1] * zoom.scale()) + zoom.translate()[1];
-    return thisX >= currentExtent[0][0] && thisX <= currentExtent[1][0] && thisY >= currentExtent[0][1] && thisY <= currentExtent[1][1] ? this : null;
+    return displayed != "none" && thisX >= currentExtent[0][0] && thisX <= currentExtent[1][0] && thisY >= currentExtent[0][1] && thisY <= currentExtent[1][1] ? this : null;
   })
   
   d3.selectAll("g.site").select(".sitecirctop").style("fill", "#ad5041")
@@ -1469,10 +1513,28 @@ function brushed() {
 function massSiteChange(onOff) {
   var currentExtent = brush.extent();
   var filteredSelection = d3.selectAll("g.site").filter(function(el) {
+    var displayed = d3.select(this).style("display");
     var thisX = (d3.transform(d3.select(this).attr("transform")).translate[0] * zoom.scale()) + zoom.translate()[0];
     var thisY = (d3.transform(d3.select(this).attr("transform")).translate[1] * zoom.scale()) + zoom.translate()[1];
-    return thisX >= currentExtent[0][0] && thisX <= currentExtent[1][0] && thisY >= currentExtent[0][1] && thisY <= currentExtent[1][1] ? this : null;
-  }).each(function(d) {onOffSite(d, onOff)})
+    return displayed != "none" && thisX >= currentExtent[0][0] && thisX <= currentExtent[1][0] && thisY >= currentExtent[0][1] && thisY <= currentExtent[1][1] ? this : null;
+  })
+  if (onOff == "exclude") {
+    d3.selectAll("g.site").each(function(d) {onOffSite(d, "on")});
+    filteredSelection.each(function(d) {onOffSite(d, "off")});
+  }
+  else if (onOff == "intersect") {
+    d3.selectAll("g.site").each(function(d) {onOffSite(d, "off")});
+    filteredSelection.each(function(d) {onOffSite(d, "on")});    
+  }
+  else if (onOff == "all") {
+    d3.selectAll("g.site").each(function(d) {onOffSite(d, "on")});
+  }
+  else if (onOff == "none") {
+    d3.selectAll("g.site").each(function(d) {onOffSite(d, "off")});
+  }
+  else {
+    filteredSelection.each(function(d) {onOffSite(d, onOff)});
+  }
 }
 
 function startBrushing() {
@@ -1492,7 +1554,20 @@ function stopBrushing() {
 function createVoronoi() {
   
   var colorArray = [];
-  d3.selectAll(".sitecirctop").each(function(el) {colorArray.push(d3.select(this).style("fill"))})
+  clippingPolys = [];
+  var cPS = zoom.scale() / 80;
+
+  var forVoronoi = [];
+  
+  d3.selectAll(".sitecirctop")
+  .filter(function() {return !cartogramRunning || d3.select(this).style("fill") != "#d3d3d3"})
+  .each(function(el) {
+    forVoronoi.push(el);
+    colorArray.push(d3.select(this).style("fill"));
+    var c = [(d3.transform(el.cartoTranslate).translate[0] * zoom.scale()) + zoom.translate()[0], (d3.transform(el.cartoTranslate).translate[1] * zoom.scale()) + zoom.translate()[1]];
+    clippingPolys.push([[c[0] - cPS,c[1]],[c[0] -cPS/2,c[1] + cPS],[c[0] + cPS/2,c[1] + cPS],[c[0] + cPS,c[1]],[c[0] + cPS/2,c[1] - cPS],[c[0] - cPS/2,c[1] - cPS]]);
+    })
+  
   var colorSet = d3.set(colorArray);
   var colorKeys = colorSet.values();
   
@@ -1502,27 +1577,18 @@ function createVoronoi() {
   voronoi = d3.geom.voronoi()
   .x(function (el) {return (d3.transform(el.cartoTranslate).translate[0] * zoom.scale()) + zoom.translate()[0];})
   .y(function (el) {return (d3.transform(el.cartoTranslate).translate[1] * zoom.scale()) + zoom.translate()[1];});
-  
-  clippingPolys = [];
-  var cPS = zoom.scale() / 80;
-  exposedsites.forEach(function (el){
-    var c = [(d3.transform(el.cartoTranslate).translate[0] * zoom.scale()) + zoom.translate()[0], (d3.transform(el.cartoTranslate).translate[1] * zoom.scale()) + zoom.translate()[1]];
-    clippingPolys.push([[c[0] - cPS,c[1]],[c[0] -cPS/2,c[1] + cPS],[c[0] + cPS/2,c[1] + cPS],[c[0] + cPS,c[1]],[c[0] + cPS/2,c[1] - cPS],[c[0] - cPS/2,c[1] - cPS]])
-  })
-  
-  vorPolys = voronoi(exposedsites);
+    
+  vorPolys = voronoi(forVoronoi);
   vorPolys.forEach(function(el,ar) {
     vorPolys[ar] = d3.geom.polygon(vorPolys[ar]).clip(clippingPolys[ar])
     })
 
   d3.select("#voronoiG").remove();
-  d3.select("svg").insert("g", "#sitesG").attr("id", "voronoiG").selectAll("path.voronoi")
+  d3.select("#mapSVG").insert("g", "#sitesG").attr("id", "voronoiG").selectAll("path.voronoi")
   .data(vorPolys)
   .enter()
   .append("path")
-  .style("fill", function(d,i) {return d3.select("#sct" + exposedsites[i].id).style("fill")})
-  .style("stroke", function(d,i) {return d3.select("#sct" + exposedsites[i].id).style("fill")})
-  .style("stroke-width", "5px")
+  .style("fill", function(d,i) {return colorArray[i]})
   .attr("d", function (d) {return "M" + d.join("L") + "Z";})
   .attr("class", "voronoi vorDelete")
   .style("opacity", 0)
@@ -1543,11 +1609,8 @@ function createVoronoi() {
 	.attr("d", function(p) {return "M" + xyToArray(p).join("L") + "Z";})
 	})
   	.style("opacity", 0)
-	  .on("mouseover", function (d) {d3.selectAll("g.Voronoi")
-      .filter(function (p) {return p.color == d.color}).style("opacity", 1);
-  })
-  .on("mouseout", function () {d3.selectAll("g.Voronoi").style("opacity", .8);
-  })
+	  .on("mouseover", vorOver)
+  .on("mouseout", vorOut)
   .transition()
   .duration(1000)
   .style("opacity", 1)
@@ -1556,6 +1619,22 @@ function createVoronoi() {
   .style("opacity", .80);
 
   d3.selectAll(".vorDelete").remove();
+
+  function vorOver(d) {
+    d3.selectAll("g.Voronoi")
+      .filter(function (p) {return p.color == d.color}).style("opacity", 1);
+      var siteNumber = d3.selectAll(".sitecirctop")
+      .filter(function (p) {return d3.select(this).style("fill") == d.color}).style("opacity", 1).size();
+    
+  d3.select("#infopopup").style("display", "block");
+  d3.select("#infocontent").html("<p>" + siteNumber + " sites in this region</p>");
+  }
+
+  function vorOut(d) {
+  d3.selectAll("g.Voronoi").style("opacity", .8);
+  d3.select("#infopopup").style("display", "none");
+  
+  }
   
   function xyToArray(incArray) {
   var newArray = []    
@@ -1751,7 +1830,7 @@ function drawTimeline(selectedRoutes) {
 
       var tlAxis = d3.svg.axis().scale(roughDistortedXScale).orient("bottom").tickSize(-60).ticks(8).tickSubdivide(true);    
       d3.select("#tlAxis").transition().duration(1000).call(tlAxis);
-      d3.select("#tlAxis").selectAll("path").style("stroke", "black")
+      d3.select("#tlAxis").selectAll("path").style("stroke", "none").style("fill", "#FAFAE6").style("opacity", .5)
       d3.select("#tlAxis").selectAll("line").style("stroke", "black").style("stroke-width", "1px")
       d3.select("#tlAxis").selectAll("line.minor").style("stroke", "gray").style("stroke-width", "1px").style("stroke-dasharray", "5 5")
       //.style("fill", "darkgray")
@@ -1827,4 +1906,130 @@ function simplifyLines(selectedLines) {
 	simpleGeom.push(simplifiedObject);
 	})
       return simpleGeom;
+}
+
+function switchControls(switchType) {
+  if (switchType == "cartogram") {
+    d3.select("#routeCalculateButton").style("display", "none");
+    d3.select("#cartoCalculateButton").style("display", "inline");
+    d3.select("#targetSelectButton").style("display", "none")
+  }
+  else {
+    d3.select("#routeCalculateButton").style("display", "inline");
+    d3.select("#cartoCalculateButton").style("display", "none");
+    d3.select("#targetSelectButton").style("display", "inline")
+  }
+}
+
+function calculateCarto() {
+  console.log(getSettings().source)
+  cartogram(getSettings().source);
+}
+
+function exportCartoCSV() {
+
+  var centers = activeCenter();
+  var newPageBegin = "<html><head><title>Exported Cartogram Data</title></head><style>div: {width:100%;}</style><body><pre>";
+  var newPageEnd = "</pre></body></html>";
+  var newPageContent = '"id","label","x","y","betw","cluster"'
+  for (x in cartogramsRun) {
+    if (centers.indexOf(""+x) > -1) {
+      newPageContent += ',"' + siteHash[cartogramsRun[x].centerID].label + '"';
+    }
+  }
+  newPageContent += "\r";
+  
+  for (x in exposedsites) {
+    newPageContent += exposedsites[x].id + ',"' + exposedsites[x].label + '",' + exposedsites[x].x + ',' + exposedsites[x].y + ',' + exposedsites[x].betweenness + ',' + exposedsites[x].nearestCluster;
+    for (y in exposedsites[x].cost) {
+      if (centers.indexOf(""+y) > -1) {
+	newPageContent += "," + exposedsites[x].cost[y];
+      }
+    }
+    newPageContent += "\r";
+  }
+  
+  var opened = window.open("", "_blank");
+  window.focus();
+  opened.document.write(newPageBegin + newPageContent + newPageEnd);
+  
+  window.URL = (window.URL || window.webkitURL);
+  
+
+  var downloadButton = d3.select("#downloadButton").style("display", "inline");
+  
+downloadButton.on("mouseover", function() {
+  var url = window.URL.createObjectURL(new Blob([newPageContent], { "type" : "application\/csv" }));
+
+    // Restore non-filtered content.
+//    processFiles();
+
+    downloadButton
+        .attr("download", "cartogram.csv")
+        .attr("href", url)
+        .on("mouseout", function(){
+          setTimeout(function() {
+            window.URL.revokeObjectURL(url);
+          }, 10);
+        });
+  });
+}
+
+function exportSVG() {
+
+d3.selectAll("path.links").style("fill", "none");
+  var newPageContent = "<svg " + d3.select("#vizContainer").node().innerHTML.split("<svg ")[2]
+
+  window.URL = (window.URL || window.webkitURL);
+  
+  var downloadButton = d3.select("#svgDownload").style("display", "inline");
+  
+downloadButton.on("mouseover", function() {
+  var url = window.URL.createObjectURL(new Blob([newPageContent], { "type" : "application\/svg" }));
+
+    // Restore non-filtered content.
+//    processFiles();
+
+    downloadButton
+        .attr("download", "orbis.svg")
+        .attr("href", url)
+        .on("mouseout", function(){
+          setTimeout(function() {
+            window.URL.revokeObjectURL(url);
+          }, 10);
+        });
+  });
+}
+
+
+function activeCenter() {
+  var foundArray = [];
+  var indexArray = [];
+  d3.selectAll(".cartoOpt").each(function() {this.checked ? foundArray.push(parseInt(this.value)) : null})
+  
+  for (x in cartogramsRun) {
+    if (foundArray.indexOf(cartogramsRun[x].id) > -1) {
+      indexArray.push(x);
+    }
+  }
+  
+  return indexArray;
+}
+
+function mapOff() {
+  if (d3.select("image").style("opacity") == 0) {
+    d3.selectAll("image").style("opacity", 1);
+  }
+  else {
+    d3.selectAll("image").style("opacity", 0);    
+  }
+}
+
+function temporaryLabels() {
+  if (d3.selectAll(".hoverlabel").empty()) {
+    d3.selectAll("g.site").each(function(d,i) {siteOver(d,i)});
+  }
+  else {
+    d3.selectAll(".hoverlabel").remove();
+  }
 }

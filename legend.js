@@ -10,7 +10,8 @@ d3.svg.legend = function() {
     var lastValue = 6;
 //    var legEvent = d3.dispatch("legendChange");
     var changeValue = 1;
-    var legEvent = d3.dispatch(legend, "something", "somethingelse")
+    var legEvent = d3.dispatch(legend, "something", "somethingelse");
+    var orientation = "horizontal";
    
     function legend(g) {
     
@@ -182,6 +183,12 @@ d3.svg.legend = function() {
     legend.units = function(incUnits) {
         if (!arguments.length) return labelUnits;
             labelUnits = incUnits;
+            return this;
+    }
+    
+    legend.orientation = function(incOrient) {
+        if (!arguments.length) return orientation;
+            orientation = incOrient;
             return this;
     }
 

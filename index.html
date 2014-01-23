@@ -12,8 +12,16 @@
   </div>
 
   <div id="vizcontainer">
+    <div id="legendmodal" class="popup">
+      <span id="infoclosebutton" onclick="d3.select('#legendmodal').style('display','none')" >X</span>
+      <svg id="legendSVG"></svg>
+    </div>
     <div id="routemodal" class="modal"></div>
     <div id="sitemodal" class="modal"></div>
+    <div id="clustermodal" class="modal">
+      <span id="infoclosebutton" onclick="d3.select('#clustermodal').style('display','none')" >X</span>
+      <p id="clustercontent"></p>
+    </div>
     <div id="infopopup" class="popup">
       <span id="infoclosebutton" onclick="d3.select('#infopopup').style('display','none')" >X</span>
       <div id="infocontent">
@@ -21,6 +29,8 @@
     <p>Please send any bugs or feature requests or other feedback to <a href="mailto:emeeks@stanford.edu">Elijah Meeks (emeeks@stanford.edu)</a></p>
     </div>
       <button class="multiSiteControl" onclick="massSiteChange('off')">Exclude these sites</button><button class="multiSiteControl" onclick="massSiteChange('on')">Include these sites</button>
+      <button class="multiSiteControl" onclick="massSiteChange('intersect')">Only These Sites</button><button class="multiSiteControl" onclick="massSiteChange('exclude')">All Sites But These</button>
+<button class="multiSiteControl" onclick="massSiteChange('all')">All Sites</button><button class="multiSiteControl" onclick="massSiteChange('none')">No Sites</button>
       </div>
     <div id="tutorialpopup" class="tutorial">
       <span id="infoclosebutton" onclick="d3.select('#tutorialpopup').style('display','none')" >X</span>
@@ -33,25 +43,27 @@
   </div>
     <div class="controlsDiv" style="position: fixed; top: 10%; right: 0px; height:100px; width: 200px; background: white;">
     <div class="buttonContainer" style="width: 180px;">
-      <button style="cursor:pointer;" onclick="fullscreenMap();">Full Screen</button>
-      <button id="startBrushingButton" style="cursor:pointer;" onclick="startBrushing();">Select Sites</button>
-      <button id="stopBrushingButton" style="display:none;cursor:pointer;" onclick="stopBrushing();">Stop Selecting</button>
-      <button style="cursor:pointer;" onclick="createVoronoi();">Voronoi</button>
-      <p>Recently Run</p>
+      <button onclick="fullscreenMap();">Full Screen</button>
+      <button id="startBrushingButton" onclick="startBrushing();">Select Sites</button>
+      <button id="stopBrushingButton" style="display:none;" onclick="stopBrushing();">Stop Selecting</button>
+      <button onclick="createVoronoi();">Regions</button>
+        <button class="controlButton" onclick="cartogramOff()">Reset Map</button>
+      <button onclick="clusterSitesUI()">Cluster</button>
+      <button onclick="">Tutorial</button>
+      <button onclick="mapOff();">Terrain</button>
+      <button onclick="temporaryLabels();">Labels</button>
+      <button onclick="exportSVG();">Export SVG</button>
+      <p><a id="svgDownload">Download SVG</a></p>
+      <p>You can also browse routes and cartograms run on ORBIS:</p>
       <button onclick="d3.select('#controlbar').style('display', 'none');d3.selectAll('#resultsTable').style('display', 'block');d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.routeRow').style('display','block');d3.selectAll('tr.routeRow').style('display','table-row');">Routes</button>
       <button  onclick="d3.select('#controlbar').style('display', 'none');d3.selectAll('#resultsTable').style('display', 'block');d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.cartoRow').style('display','block');d3.selectAll('tr.cartoRow').style('display','table-row');">Cartograms</button>
-      <p>You can also browse routes and cartograms run on ORBIS:</p>
-      <button>Explore Routes and Cartograms</button>
       <p>Color the network by priority to get a sense of how the network changes based on priority.</p>
       <button id="eButton" class="routeLabelButton controlButton" onclick="colorBy('e')">Expense</button> <button id="sButton" class="routeLabelButton controlButton" onclick="colorBy('s')">Speed</button> <button id="tButton" class="routeLabelButton controlButton active" onclick="colorByType()">Type</button>
-      <p>You can restore the map view by turning off the cartogram.</p>
-      <button class="controlButton" onclick="cartogramOff()">Reset Map</button>
-      <p>Once you've run several cartograms of the same kind, you can cluster sites to see regions.</p>
-      <button style="float:right;" onclick="clusterSitesUI()">Cluster</button>
     </div>
     </div>
 
   <div class="controlsDiv" id="controlbar" style="position: fixed; top: 10%; left: 0px; height:80%; width: 230px; background: white;">
+    <button onclick="switchControls('route');" style="position:absolute;top:-22px">Route</button><button onclick="switchControls('cartogram');" style="position:absolute;left:45px;top:-22px">Cartogram</button>
     <div class="buttonContainer" style="background:#F8F8F8;width:140px">
       <select id="sourceSelectButton" class="controlButton">
         </select> <select id="targetSelectButton" class="controlButton">
@@ -105,7 +117,8 @@
     </div>
 
     <div style="background:lightred" class="buttonContainer">
-      <button class="controlButton" onclick="calculateRoute()">Calculate Route</button>
+      <button class="controlButton" id="routeCalculateButton" onclick="calculateRoute()">Calculate Route</button>
+      <button class="controlButton" id="cartoCalculateButton" style="display:none;" onclick="calculateCarto()">Calculate Cartogram</button>
           <div id="routeResults" class="modal"></div>
     </div>
   </div>
