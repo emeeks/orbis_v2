@@ -6,7 +6,8 @@
 </head>
 
 <body>
-  <div id="restoreButton" style="display: none;position: fixed; top:30px; left:30px;"><button style="cursor:pointer;" onclick="restoreControlsMap();">Controls</button></div>
+  <div id="topbar"><div id="title">ORBIS 2.0 (beta)</div><div id="authors"><a href="http://www.stanford.edu/~scheidel/">Walter Scheidel</a> <a href="https://dhs.stanford.edu">Elijah Meeks</a></div></div>
+  <div id="restoreButton" style="display: none;position: fixed; top:50px; left:30px;"><button style="cursor:pointer;" onclick="restoreControlsMap();">Controls</button></div>
   <div class="controlsDiv" style="position: fixed; bottom:10px; right:10px; background: white;">
     <a href="https://github.com/emeeks/orbis_v2"><img style="position: fixed; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
   </div>
@@ -41,7 +42,7 @@
     </div>
 
   </div>
-    <div class="controlsDiv" style="position: fixed; top: 10%; right: 0px; height:100px; width: 200px; background: white;">
+    <div class="controlsDiv" style="position: fixed; top: 10%; right: 0px; height:100px; width: 200px; background:#F8F8F8;">
     <div class="buttonContainer" style="width: 180px;">
       <button onclick="fullscreenMap();">Full Screen</button>
       <button id="startBrushingButton" onclick="startBrushing();">Select Sites</button>
@@ -53,6 +54,7 @@
       <button onclick="mapOff();">Terrain</button>
       <button onclick="temporaryLabels();">Labels</button>
       <button onclick="exportSVG();">Export SVG</button>
+      <button style="display:none;" onclick="testCommunities(exposedsites,exposedroutes,d3.selectAll('g.site'))">Network Communities</button>
       <p><a id="svgDownload">Download SVG</a></p>
       <p>You can also browse routes and cartograms run on ORBIS:</p>
       <button onclick="d3.select('#controlbar').style('display', 'none');d3.selectAll('#resultsTable').style('display', 'block');d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.routeRow').style('display','block');d3.selectAll('tr.routeRow').style('display','table-row');">Routes</button>
@@ -62,9 +64,10 @@
     </div>
     </div>
 
-  <div class="controlsDiv" id="controlbar" style="position: fixed; top: 10%; left: 0px; height:80%; width: 230px; background: white;">
-    <button onclick="switchControls('route');" style="position:absolute;top:-22px">Route</button><button onclick="switchControls('cartogram');" style="position:absolute;left:45px;top:-22px">Cartogram</button>
-    <div class="buttonContainer" style="background:#F8F8F8;width:140px">
+  <div class="controlsDiv" id="controlbar" style="position: fixed; top: 10%; left: 0px; height:80%; width: 230px; background:#F0F0F0;">
+    <a class="tab" onclick="switchControls('route');" style="left:10px;">Route</a>
+    <a class="tab backtab"  onclick="switchControls('cartogram');" style="left:64px;">Cartogram</a>
+    <div class="buttonContainer" style="width:140px">
       <select id="sourceSelectButton" class="controlButton">
         </select> <select id="targetSelectButton" class="controlButton">
         </select>
@@ -102,7 +105,7 @@
       <button id="fPriority" class="controlButton priorityButton active" onclick="priorityClick(this)">Fastest</button> <button id="cPriority" class="controlButton priorityButton" onclick="priorityClick(this)">Cheapest</button> <button id="sPriority" class="controlButton priorityButton" onclick="priorityClick(this)">Shortest</button>
     </div>
 
-    <div class="buttonContainer" style="background:#F8F8F8;width:210px">
+    <div class="buttonContainer" style="width:210px">
       <button id="roadFlip" class="controlButton active" onclick="flipButton(this);updateBGRoutes();">Road</button> <button id="riverFlip" class="controlButton active" onclick="flipButton(this);updateBGRoutes();">River</button> <button id="coastFlip" class="controlButton active" onclick="flipButton(this);updateBGRoutes();">Coastal Sea</button>
       <button id="seaFlip" class="controlButton active" onclick="flipButton(this);updateBGRoutes();">Open Sea</button> <button id="dayFlip" class="controlButton" onclick="flipButton(this);updateBGRoutes();">Coastal (Daylight)</button>
     </div>
@@ -111,7 +114,7 @@
       <button id="aquaticSea" style="background:lightgreen;" class="controlButton" onclick="aquaticOptions(this)">Civilian River</button> <button id="aquaticRiver" style="background:lightgreen;" class="controlButton" onclick="aquaticOptions(this)">Fast Sea</button>
     </div>
 
-    <div class="buttonContainer" style="background:#F8F8F8;width:190px">
+    <div class="buttonContainer" style="width:190px">
       Vehicle Type <select id="vehicleSelectButton" style="width:170px;" class="controlButton" onclick="colorBy('e')">
         </select> Transfer cost: <input type="text" style="width:30px;" id="transferCost" class="controlButton" onclick="colorByType()" /> days <button style="float:right;">Advanced</button> 
     </div>
@@ -156,19 +159,24 @@
       </div>
     </div>
   <div id="timelineViz">
-    <button id="tlbPerspective" style="position:absolute;z-index: 1;top:-15px;left:20px;" >Perspective</button>
-    <button id="tlbDuration" style="position:absolute;z-index: 1;top:-15px;left:120px;" >Duration</button>
-    <button id="tlbDistance" style="position:absolute;z-index: 1;top:-15px;left:220px;" >Distance</button>
-    <button id="tlbExpensed" style="position:absolute;z-index: 1;top:-15px;left:320px;" >Expense (D)</button>
-    <button id="tlbExpensew" style="position:absolute;z-index: 1;top:-15px;left:420px;" >Expense (W)</button>
-    <button id="tlbExpensec" style="position:absolute;z-index: 1;top:-15px;left:520px;" >Expense (C)</button>
-    <button id="tlbDistance" style="position:absolute;z-index: 1;top:-15px;left:620px;" onclick="d3.select('#timelineViz').style('display','none');" >Close Timeline</button>
+    <a id="tlbPerspective" class="tab" style="left:20px;" >Perspective</a>
+    <a id="tlbDuration" class="tab backtab" style="left:116px;" >Duration</a>
+    <a id="tlbDistance" class="tab backtab" style="left:188px;" >Distance</a>
+    <a id="tlbExpensed" class="tab backtab" style="left:263px;" >Expense (D)</a>
+    <a id="tlbExpensew" class="tab backtab" style="left:359px;" >Expense (W)</a>
+    <a id="tlbExpensec" class="tab backtab" style="left:459px;" >Expense (C)</a>
+    <a id="infoclosebutton" onclick="d3.select('#timelineViz').style('display','none');" >X</a>
 <svg id="timelineSVG" width="100%" height="100%">
-  <g id="tlAxis" transform="translate(0,80)"></g>
+  <g id="tlXAxis" class="tlAxis" transform="translate(0,100)"></g>
+  <g id="tlYAxis" class="tlAxis" transform="translate(60,0)"></g>
+  <text x="10" y="15">Longitude</text>
+  <text id="tlXLabel" x="90" y="115">Latitude</text>
 </svg>
 
   </div>
-
+  <div class="footer">
+Published by <a href="http://library.stanford.edu">Stanford University Libraries</a> | <span style="font-size:9px;">Tiles &#169; <a href="http://awmc.unc.edu/wordpress/tiles/map-tile-information">AWMC</a>, CC BY-NC 3.0</span>
+</div>
   <footer>
     <script src="o_settings.js" type="text/javascript">
 </script> <script src="d3.v3.min.js" type="text/javascript">
@@ -178,6 +186,7 @@
 </script> <script src="legend.js" type="text/javascript">
 </script> <script src="clipper.js" type="text/javascript">
 </script> <script src="orbis.js" type="text/javascript">
+</script> <script src="community.js" type="text/javascript">
 </script>
   </footer>
 </body>
