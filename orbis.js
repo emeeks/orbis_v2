@@ -14,6 +14,10 @@
     "July", "August", "September", "October", "November", "December" ];
   settingsID = 0;
   frontierSetting = .8;
+  directionHash = {0: "From", 1: "To"};
+  sankeyHash = {};
+  
+  betweennessScale = d3.scale.linear().domain([0,1,2]).range([0,10,30])
 
 var typeHash = {road: "brown", overseas: "green", coastal: "#5CE68A", upstream: "blue", downstream: "blue", ferry: "purple"}
 
@@ -42,6 +46,7 @@ zoom = d3.behavior.zoom()
     .scale(projection.scale() * 2 * Math.PI)
     .scaleExtent([1 << 12, 1 << 17])
     .translate([width - center[0], height - center[1]])
+    .center([width / 2,height / 2])
     .on("zoom", zoomed);
     
 // With the center computed, now adjust the projection such that
@@ -99,13 +104,8 @@ d3.json("topocoast.json", function(error, coast) {
   .append("path")
   .attr("class", "routes links")
   .attr("d", path)
-  .style("stroke", function(d) {return typeHash[d.properties.t]}) 
-  .on("mouseover", function(d) {
-	d3.select(this).transition().duration(500).style("stroke-opacity", 1);
-	})
-  .on("mouseout", function() {
-	d3.select(this).transition().duration(500).style("stroke-opacity", .5);
-	});
+  .style("stroke-linecap", "round")
+  .style("stroke", function(d) {return typeHash[d.properties.t]});
 
 simplifiedGeoms = simplifyLines(d3.selectAll("path.routes"));
 
@@ -143,6 +143,9 @@ d3.csv("sites.csv", function(error, sites) {
       
       el.properties.source = siteHash[realSource];
       el.properties.target = siteHash[realTarget];
+      el.properties.fixedWidth = 2;
+      el.properties.fixedColor = typeHash[el.properties.t];
+      
     })
 
   exposedsites.sort(function(a,b) {
@@ -218,7 +221,6 @@ siteLabel("site_g_"+initialLabels[x]);
     .insert("path", "#sitesG")
     .attr("d", path)
     .attr("class", "results")
-    .style("stroke", function(d) {return typeHash[d.properties.segment_type]})
     .style("stroke-width", 5)
     .style("opacity", .5)
   
@@ -276,7 +278,8 @@ function zoomComplete() {
   d3.selectAll(".results").style("display", "block")
   d3.selectAll(".routes")
       .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
-      .style("stroke-width", scaled(2));
+      .style("stroke", function(d) {return d.properties.fixedColor})
+      .style("stroke-width", function(d) {return scaled(d.properties.fixedWidth)})
 
   d3.selectAll(".results")
       .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
@@ -312,8 +315,8 @@ function zoomed() {
       .remove();
 
   image.enter().append("image")
-//      .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/elijahmeeks.map-ktkeam22/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
-      .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/isawnyu.map-knmctlkh/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+      .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/isawnyu.ham5889p/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+//      .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/isawnyu.map-knmctlkh/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
       .attr("width", 1)
       .attr("height", 1)
       .attr("x", function(d) { return d[0]; })
@@ -327,11 +330,11 @@ d3.select("#sitesG")
     .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
   
 d3.selectAll(".sitecirc")
-    .attr("r", function(d) {return scaled((d.betweenness * 4) + 20)});
+    .attr("r", function(d) {return scaled((betweennessScale(d.betweenness)) + 20)});
 
 d3.selectAll(".sitecirctop")
   .attr("id", function(d,i) {return "sct" + d.id})
-  .attr("r", function(d) {return scaled((d.betweenness * 4) + 16)})
+  .attr("r", function(d) {return scaled((betweennessScale(d.betweenness)) + 16)})
   .attr("cx", scaled(-2))
   .attr("cy", scaled(-2));
 
@@ -343,8 +346,7 @@ d3.selectAll(".slabel")
   
     d3.selectAll(".routes")
       .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
-      .style("stroke-width", scaled(2));
-
+      .style("stroke-width", function(d) {return scaled(2)});
 }
 
 function colorBy(attribute) {
@@ -383,6 +385,7 @@ function siteClick(d,i) {
   }
   modalContents.append("p").html("<button id='incExcButton'>" + (excludedSites.indexOf(d.id) > -1 ? "Include Site" : "Exclude Site") + "</button>").on("click", function() {onOffSite(d)})
   modalContents.append("p").html("<button onclick='d3.select(this).remove();cartogram("+d.id+")'>Cartogram</button>")
+  modalContents.append("p").html("<button onclick='d3.select(this).remove();geoSankey("+d.id+")'>Minard Diagram</button>")
   var costList = modalContents.append("ol")
   costList.selectAll("li").data(d.cost).enter().append("li").html(function(p) {return p});
 }
@@ -488,7 +491,7 @@ function cartogram(centerID) {
   newSettings["centerID"] = centerID;
   cartogramsRun.push(newSettings)
   
-//  cartoQuery = "new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
+  cartoQuery = "new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded+"&d="+newSettings.direction;
 
   d3.csv(cartoQuery, function(error,cartoData) {
 
@@ -585,7 +588,7 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
     d.cartoTranslate = "translate("+ (findx(d["cost"][cartoPosition],d.x,d.y,centerX,centerY))  + "," + (findy(d["cost"][cartoPosition],d.x,d.y,centerX,centerY)) + ")scale(.159)";
   })
 
-  d3.selectAll("image").transition().duration(3000).style("opacity", .5);
+  d3.select("#rasterG").transition().duration(3000).style("opacity", .5);
   d3.selectAll("path.links").each(function(d) {
     var xposition = -1;
     var yposition = -1;
@@ -628,7 +631,7 @@ function cartogramOff() {
   d3.selectAll("g.legendRing").remove();
   d3.select("#sitemodal").style("display", "none");
   cartogramRunning = false;
-  d3.selectAll("image").transition().duration(3000).style("opacity", 1);
+  d3.select("#rasterG").transition().duration(3000).style("opacity", 1);
 
   d3.selectAll("g.site").filter(function(d) {return d.cost[lastCartoRan] == -1 ? this : null}).select(".sitecirctop").style("fill", "lightgray")
 
@@ -654,7 +657,7 @@ function calculateRoute() {
   var newSettings = getSettings();
   routesRun.splice(0,0,newSettings)
 
-//  routeQuery = "new_route.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&s="+newSettings.source+"&t="+newSettings.target+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
+  routeQuery = "new_route.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&s="+newSettings.source+"&t="+newSettings.target+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
 
   d3.json(routeQuery, function(error,routeData) {
     exposedNewData = routeData;
@@ -711,7 +714,11 @@ function calculateRoute() {
 	}
       }
     }
-    
+
+
+    var maxBetweenness = d3.max(exposedsites, function (d) {return d.betweenness});
+    betweennessScale.domain([0,1,maxBetweenness])
+
     addRouteRow(newSettings, routeData)
   })
 }
@@ -724,7 +731,8 @@ function getSettings() {
   
   var priority = 0;
   var modeList = '';
-  var modeArray = []
+  var modeArray = [];
+  var cartoDirection = 0;
   
   d3.select("#cPriority").classed("active") == true ? priority = 1 : null;
   d3.select("#sPriority").classed("active") == true ? priority = 2 : null;  
@@ -743,6 +751,9 @@ function getSettings() {
     document.getElementById("aquaticSea").value == 'slowsea' ? modeArray.push('dayslow') : modeArray.push('dayfast')
   }
 
+  var monthID = d3.selectAll("#monthPicker > input").filter(function() {return d3.select(this).property("checked") ? this : null}).attr("value");
+  var cartoDirection = d3.selectAll("#directionPicker > input").filter(function() {return d3.select(this).property("checked") ? this : null}).attr("value");
+
   var vehicleType = document.getElementById("vehicleSelectButton").value;
   var transferCost = parseFloat(document.getElementById("transferCost").value);
   isNaN(transferCost) ? transferCost = 0 : null;
@@ -753,7 +764,7 @@ function getSettings() {
   
   var excludedIDs = excludedSites.toString();
   settingsID++;
- return {id: settingsID, modes: modeList, modeArr: modeArray, source: sourceID, target: targetID, month: monthID, priority: priority, vehicle: vehicleType, transfer: transferCost, excluded: excludedIDs}
+ return {id: settingsID, modes: modeList, modeArr: modeArray, source: sourceID, target: targetID, month: monthID, priority: priority, vehicle: vehicleType, transfer: transferCost, excluded: excludedIDs, direction: cartoDirection}
   
 }
 
@@ -859,7 +870,7 @@ function clusterSitesUI() {
   aCLI.append("input")
   .attr("type", "checkbox")
   .attr("class", "cartoOpt")
-  .attr("value", function(d) {return d.id});
+  .attr("value", function(d,i) {return i});
 
 
   d3.selectAll(".availCartos")
@@ -906,7 +917,7 @@ function clusterSites() {
 	    exposedsites[x]["nearestCluster"] = "frontier";
 	  }
 	  else if (parseFloat(exposedsites[x]["cost"][y]) < maxVal) {
-            exposedsites[x]["nearestCluster"] = siteHash[activeCentersFull[y].centerID].label;
+            exposedsites[x]["nearestCluster"] = directionHash[activeCentersFull[y].direction]+"-"+siteHash[activeCentersFull[y].centerID].label;
             maxVal = parseFloat(exposedsites[x]["cost"][y]);
 	  }
         }
@@ -1885,21 +1896,30 @@ function simplifyLines(selectedLines) {
 }
 
 function switchControls(switchType) {
+    d3.selectAll(".calculateButton").style("display", "none");
   if (switchType == "cartogram") {
-    d3.select("#routeCalculateButton").style("display", "none");
     d3.select("#cartoCalculateButton").style("display", "inline");
-    d3.select("#targetSelectButton").style("display", "none")
+    d3.select("#targetSelectButton").style("display", "none");
+    d3.select("#directionPicker").style("display", "inline");
+  }
+  else if (switchType == "Minard") {
+    d3.select("#sankeyCalculateButton").style("display", "inline");
+    d3.select("#targetSelectButton").style("display", "none");
+    d3.select("#directionPicker").style("display", "inline");    
   }
   else {
     d3.select("#routeCalculateButton").style("display", "inline");
-    d3.select("#cartoCalculateButton").style("display", "none");
     d3.select("#targetSelectButton").style("display", "inline")
+    d3.select("#directionPicker").style("display", "none");
   }
 }
 
 function calculateCarto() {
-  console.log(getSettings().source)
   cartogram(getSettings().source);
+}
+
+function calculateSankey() {
+  geoSankey(getSettings().source);
 }
 
 function exportCartoCSV() {
@@ -1964,7 +1984,7 @@ d3.selectAll("path.links").style("fill", "none");
 downloadButton.on("mouseover", function() {
   var url = window.URL.createObjectURL(new Blob([newPageContent], { "type" : "application\/svg" }));
 
-    // Restore non-filtered content.
+// Restore non-filtered content.
 //    processFiles();
 
     downloadButton
@@ -1985,7 +2005,7 @@ function activeCenter() {
   d3.selectAll(".cartoOpt").each(function() {this.checked ? foundArray.push(parseInt(this.value)) : null})
   
   for (x in cartogramsRun) {
-    if (foundArray.indexOf(cartogramsRun[x].id) > -1) {
+    if (foundArray.indexOf(parseInt(x)) > -1) {
       indexArray[x] = cartogramsRun[x];
     }
   }
@@ -1993,12 +2013,13 @@ function activeCenter() {
   return indexArray;
 }
 
-function mapOff() {
-  if (d3.select("image").style("opacity") == 0) {
-    d3.selectAll("image").style("opacity", 1);
+function mapOff(opacSetting) {
+  opacSetting = opacSetting || 0;
+  if (d3.select("#rasterG").style("opacity") == 1) {
+    d3.select("#rasterG").style("opacity", opacSetting);
   }
   else {
-    d3.selectAll("image").style("opacity", 0);    
+    d3.select("#rasterG").style("opacity", 1);    
   }
 }
 
@@ -2010,3 +2031,146 @@ function temporaryLabels() {
     d3.selectAll(".hoverlabel").remove();
   }
 }
+
+function zoomManual(zoomDirection) {
+  var cZoom = zoom.scale();
+  if (zoomDirection == "in") {
+    zoom.scale(cZoom * 2);
+    zoom.translate([zoom.translate()[0] - (zoom.center()[0] /2), zoom.translate()[1] + (zoom.center()[1])])
+    console.log(zoom.center())
+//    zoom.center([500,500]);
+  }
+  else {
+    zoom.scale(cZoom / 2);
+    zoom.translate([zoom.translate()[0] + (zoom.center()[0] /2), zoom.translate()[1] - (zoom.center()[1])])
+//    zoom.center([500,500]);
+  }
+  zoomed();
+}
+
+function geoSankey(centerID) {
+    var newSettings = getSettings();
+  newSettings["centerID"] = centerID;
+  sankeyHash = {};
+
+    minardQuery = "sankey_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded+"&d="+newSettings.direction;
+
+  d3.csv(minardQuery, function(error,cartoData) {
+    for (x in cartoData) {
+      sankeyHash[cartoData[x].source + "-" + cartoData[x].target] = cartoData[x].freq;
+      sankeyHash[cartoData[x].target + "-" + cartoData[x].source] = cartoData[x].freq;
+    }
+    
+    freqMax = d3.max(cartoData.filter(function (el) {return el.source != el.target}), function (d) {return parseInt(d.freq)});
+    freqScale = d3.scale.linear().domain([1,10,25,50,100,200,freqMax]).range([2,6,10,14,16,20,25]);
+    freqColor = d3.scale.linear().domain([1,10,25,50,100,200,freqMax]).range(colorbrewer.Purples[7]);
+//    freqScale = d3.scale.linear().domain([1,freqMax]).range([2,20]);
+//    freqColor = d3.scale.linear().domain([freqMax,1]).range(["red","blue"]);
+    
+    d3.selectAll("path.routes").each(
+      function(d) {
+      var realSource = d.properties.sid.toString().length == 6 ? d.properties.sid.toString().substring(1,6) : d.properties.sid;
+      var realTarget = d.properties.tid.toString().length == 6 ? d.properties.tid.toString().substring(1,6) : d.properties.tid;
+      if (sankeyHash[realSource+"-"+realTarget]) {
+	d.properties.fixedWidth = freqScale(sankeyHash[realSource+"-"+realTarget]);
+//	d.fixedColor = freqColor(sankeyHash[realSource+"-"+realTarget]);
+  	d.properties.fixedColor = "black";
+	d.properties.lastFreq = parseInt(sankeyHash[realSource+"-"+realTarget]);
+      }
+      else {
+	d.properties.fixedWidth = 1;
+	d.properties.fixedColor = "none";
+	d.properties.lastFreq = 0;
+      }
+      })
+  zoomComplete();
+  })
+  d3.selectAll("circle").style("display", "none")
+  mapOff(.2);
+  d3.select("#sankeyButton").style("display", "block")
+}
+
+function sankeyOff() {
+      d3.select("#sankeyButton").style("display", "none");
+      d3.selectAll("circle").style("display", "block")
+      mapOff(1);
+      d3.selectAll("path.routes").each(
+      function(d) {
+	d.properties.fixedWidth = 2;
+  	d.properties.fixedColor = typeHash[d.properties.t];
+      })
+      zoomComplete();
+}
+
+/*
+function trueSankey() {
+  d3.select("#sankeyChart").style("display", "block");
+  sankeyNodes = [];
+  sankeyLinks = [];
+  var sankeyHash = {};
+  var addedNodes = [];
+  for (x in exposedroutes.objects.new_routes.geometries) {
+    if (exposedroutes.objects.new_routes.geometries[x].properties.lastFreq > 0) {
+      if (addedNodes.indexOf(exposedroutes.objects.new_routes.geometries[x].properties.source.id) == -1) {
+	sankeyHash[exposedroutes.objects.new_routes.geometries[x].properties.source.id] = addedNodes.length;
+	addedNodes.push(exposedroutes.objects.new_routes.geometries[x].properties.source.id)
+	sankeyNodes.push({name: exposedroutes.objects.new_routes.geometries[x].properties.source.label})
+      }
+      if (addedNodes.indexOf(exposedroutes.objects.new_routes.geometries[x].properties.target.id) == -1) {
+	sankeyHash[exposedroutes.objects.new_routes.geometries[x].properties.target.id] = addedNodes.length;
+	addedNodes.push(exposedroutes.objects.new_routes.geometries[x].properties.target.id);
+	sankeyNodes.push({name: exposedroutes.objects.new_routes.geometries[x].properties.target.label})
+      }
+      var newLink = {source: sankeyHash[exposedroutes.objects.new_routes.geometries[x].properties.source.id], target: sankeyHash[exposedroutes.objects.new_routes.geometries[x].properties.target.id], value: exposedroutes.objects.new_routes.geometries[x].properties.lastFreq};
+      sankeyLinks.push(newLink);
+    }
+  }
+  
+    var intensityRamp = d3.scale.linear().domain([0,d3.max(sankeyLinks, function(d) {return d.value})]).range(["black", "red"])
+    
+    var sankey = d3.sankey()
+    .nodeWidth(1)
+    .nodePadding(1)
+    .size([4000, 4000]);
+
+  var path = sankey.link();
+
+  sankey
+      .nodes(sankeyNodes)
+      .links(sankeyLinks)
+      .layout(5);
+  
+  d3.select("#sankeyChart").select("svg").append("g").attr("transform", "translate(20,20)").attr("id", "sankeyG");
+  
+  d3.select("#sankeyG").selectAll(".link")
+      .data(sankeyLinks)
+    .enter().append("path")
+      .attr("class", "link")
+      .attr("d", sankey.link())
+      .style("stroke-width", function(d) {return d.dy})
+      .style("stroke-opacity", .5)
+      .style("fill", "none")
+      .style("stroke", function(d){return intensityRamp(d.value)})
+      .sort(function(a, b) { return b.dy - a.dy; })
+      .on("mouseover", function() {d3.select(this).style("stroke-opacity", .8)})
+      .on("mouseout", function() {d3.selectAll("path.link").style("stroke-opacity", .5)})
+
+  d3.select("#sankeyG").selectAll(".node")
+      .data(sankeyNodes)
+    .enter().append("g")
+      .attr("class", "node")
+      .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+
+  d3.selectAll(".node").append("circle")
+      .attr("height", function(d) { return d.dy; })
+      .attr("r", function(d) { return d.dy / 2; })
+      .attr("cy", function(d) { return d.dy / 2; })
+      .style("fill", "pink")
+
+  d3.selectAll(".node").append("text")
+      .attr("x", 0)
+      .attr("y", function(d) { return d.dy / 2; })
+      .attr("text-anchor", "middle")
+      .text(function(d) { return d.name; })
+}
+*/
