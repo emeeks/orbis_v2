@@ -272,6 +272,38 @@ opacity: 1;
   cursor: pointer;
 }
 
+
+.footer
+{
+font-size: .8em;	
+background-color:#FFFFFF;
+border: 1px #959595 solid;
+border-bottom: none;
+position: absolute;
+bottom: 0px;
+padding: 6px;
+}
+
+.helpicon
+{
+  margin-left: 5px;
+  cursor: pointer;
+}
+
+.routes
+{
+  pointer-events: none;
+}
+
+#priorityForm
+{
+  font-size: 12px;
+}
+.checkboxDiv
+{
+  display: inline-block;
+}
+
 #topbar {
   position:fixed;
   top:0;
@@ -300,20 +332,52 @@ opacity: 1;
 }
 
 #title {
-  position: absolute;
+  float: left;
   left: 0;
   padding: 0 20px;
   font-size: 30px;
   color: white;
 }
 
-.footer
-{
-font-size: .8em;	
-background-color:#FFFFFF;
-border: 1px #959595 solid;
-border-bottom: none;
-position: absolute;
-bottom: 0px;
-padding: 6px;
+.navtab {
+  margin-top: 11px;
+  padding: 5px 5px 2px;
+  border: 1px solid gray;
+  height: 20px;
+  font-size: 12px;
+  color: gray;
+  float: left;
+  background: white;
+  cursor: pointer;
+}
+
+.navtab:hover {
+  background: gray;
+  color: white;
+}
+
+#essayBox {
+  position: fixed;
+  background: rgba(0,0,0,.5);
+  left:0px;
+  right: 0px;
+  top: 40px;
+  bottom: 0px;
+  z-index: 98;
+  display: none;
+}
+#essayContent {
+  position:absolute;
+  left:50px;
+  right: 50px;
+  top: 50px;
+  bottom: 50px;
+  border: 1px solid gray;
+  background: white;
+  padding: 20px;
+  z-index: 99;
+  overflow: auto;
+  display: none;
+
+  
 }

@@ -16,6 +16,7 @@
   frontierSetting = .8;
   directionHash = {0: "From", 1: "To"};
   sankeyHash = {};
+  routeOpacity = false;
   
   betweennessScale = d3.scale.linear().domain([0,1,2]).range([0,10,30])
 
@@ -46,7 +47,7 @@ zoom = d3.behavior.zoom()
     .scale(projection.scale() * 2 * Math.PI)
     .scaleExtent([1 << 12, 1 << 17])
     .translate([width - center[0], height - center[1]])
-    .center([width / 2,height / 2])
+//    .center([width / 2,height / 2])
     .on("zoom", zoomed);
     
 // With the center computed, now adjust the projection such that
@@ -83,6 +84,10 @@ d3.selectAll(".tab").each(function() {
   combinedFunction = addedFunction + d3.select(this).attr("onclick");
   d3.select(this).attr("onclick", combinedFunction);
 })
+
+d3.selectAll(".navTab").on("click", function() {createEssay(d3.select(this).attr("data"))})
+
+d3.selectAll(".helpicon").on("click", function() {contextualHelp(d3.select(this).attr("data"))})
 
 colorRamp=d3.scale.linear().domain([0,1,5,10]).range(["#004e99","#7e8fc3","#c28711","#ad5041"])
 
@@ -315,8 +320,7 @@ function zoomed() {
       .remove();
 
   image.enter().append("image")
-      .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/isawnyu.ham5889p/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
-//      .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/isawnyu.map-knmctlkh/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+      .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/elijahmeeks.map-ktkeam22/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
       .attr("width", 1)
       .attr("height", 1)
       .attr("x", function(d) { return d[0]; })
@@ -347,6 +351,7 @@ d3.selectAll(".slabel")
     d3.selectAll(".routes")
       .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
       .style("stroke-width", function(d) {return scaled(2)});
+  
 }
 
 function colorBy(attribute) {
@@ -483,7 +488,6 @@ function aquaticOptions(button) {
 
 function cartogram(centerID) {
   
-
   var centerX = siteHash[centerID].x;
   var centerY = siteHash[centerID].y;
   
@@ -491,7 +495,7 @@ function cartogram(centerID) {
   newSettings["centerID"] = centerID;
   cartogramsRun.push(newSettings)
   
-  cartoQuery = "new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded+"&d="+newSettings.direction;
+//  cartoQuery = "new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded+"&d="+newSettings.direction;
 
   d3.csv(cartoQuery, function(error,cartoData) {
 
@@ -594,24 +598,15 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
     var yposition = -1;
   var lineLength = d.coordinates.length - 1;
   var cartoRamp = d3.scale.linear().range([d.properties.source["cost"][cartoPosition],d.properties.target["cost"][cartoPosition]]).domain([0, lineLength]);
+  d.cartocoords = d.coordinates.map(function(d,i) {return [findx(cartoRamp(i),d[0],d[1],centerX,centerY),findy(cartoRamp(i),d[0],d[1],centerX,centerY)]});
   cartoPath =
   d3.svg.line()
-  .x(function(p) {return lineInterpolatorX(p)})
-  .y(function(p) {return lineInterpolatorY(p)});
+  .x(function(p) {return p[0]})
+  .y(function(p) {return p[1]});
   
-  function lineInterpolatorX (incomingRoute) {
-    xposition++;return findx(cartoRamp(xposition),incomingRoute[0],incomingRoute[1],centerX,centerY)
-  }
-
-  function lineInterpolatorY (incomingRoute) {
-    yposition++;return findy(cartoRamp(yposition),incomingRoute[0],incomingRoute[1],centerX,centerY)
-  }
-  d.cartoD = cartoPath(d.coordinates);
-
-    
+  d.cartoD = cartoPath(d.cartocoords);
   })
-  
-  
+
     svg.selectAll("g.site")
   .transition()
   .duration(3000)
@@ -657,7 +652,7 @@ function calculateRoute() {
   var newSettings = getSettings();
   routesRun.splice(0,0,newSettings)
 
-  routeQuery = "new_route.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&s="+newSettings.source+"&t="+newSettings.target+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
+//  routeQuery = "new_route.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&s="+newSettings.source+"&t="+newSettings.target+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
 
   d3.json(routeQuery, function(error,routeData) {
     exposedNewData = routeData;
@@ -680,7 +675,7 @@ function calculateRoute() {
       routeSegments.push(routeData.features[x])
     }
 
-//  svg.selectAll("path.results").remove();
+  d3.select("#routesContainer").style("opacity", .2);
   
   svg.selectAll("path.results")
     .data(routeSegments, function(d) {return d.properties.routeID + "_" + d.properties.segment_id})
@@ -695,9 +690,7 @@ function calculateRoute() {
     .on("click", routeClick)
   .on("mouseover", resultsOver)
   .on("mouseout", resultsOut)
-  .transition()
-    .duration(1000)
-    .style("opacity", 1)
+  .style("opacity", 1)
 
     zoomed();
     
@@ -728,28 +721,11 @@ function getSettings() {
   var sourceID = document.getElementById("sourceSelectButton").value;
   var targetID = document.getElementById("targetSelectButton").value;
   var monthID = d3.selectAll("#monthPicker > input").filter(function() {return d3.select(this).property("checked") ? this : null}).attr("value");
-  
-  var priority = 0;
+  var priority = d3.select("#priorityForm > input:checked").node().value;
+
   var modeList = '';
-  var modeArray = [];
+  var modeArray = updateBGRoutes();
   var cartoDirection = 0;
-  
-  d3.select("#cPriority").classed("active") == true ? priority = 1 : null;
-  d3.select("#sPriority").classed("active") == true ? priority = 2 : null;  
-  d3.select("#roadFlip").classed("active") == true ? modeArray.push('road') : null;
-  
-  if (d3.select("#riverFlip").classed("active") == true) {
-    document.getElementById("aquaticRiver").value == 'milriver' ? modeArray.push('fastupfastdown') : modeArray.push('upstreamdownstream')
-  }
-  if (d3.select("#seaFlip").classed("active") == true) {
-    document.getElementById("aquaticSea").value == 'slowsea' ? modeArray.push('slowover') : modeArray.push('overseas')
-  }
-  if (d3.select("#coastFlip").classed("active") == true) {
-    document.getElementById("aquaticSea").value == 'slowsea' ? modeArray.push('slowcoast') : modeArray.push('coastal')
-  }
-  if (d3.select("#dayFlip").classed("active") == true) {
-    document.getElementById("aquaticSea").value == 'slowsea' ? modeArray.push('dayslow') : modeArray.push('dayfast')
-  }
 
   var monthID = d3.selectAll("#monthPicker > input").filter(function() {return d3.select(this).property("checked") ? this : null}).attr("value");
   var cartoDirection = d3.selectAll("#directionPicker > input").filter(function() {return d3.select(this).property("checked") ? this : null}).attr("value");
@@ -769,6 +745,7 @@ function getSettings() {
 }
 
 function routeClick(d,i) {
+  d3.select('#routesContainer').style('opacity', .2);
   d3.event.stopPropagation();
   var coords = d3.mouse(document.body);
   var modalContents = d3.select("#sitemodal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
@@ -879,7 +856,9 @@ function clusterSitesUI() {
   var clusterControls = modalContents.append("p");
   clusterControls.append("button").on("click", clusterSites).html("Cluster")
   clusterControls.append("span").html("Frontier Tolerance");
-  clusterControls.append("textarea").attr("id", "frontier").style("resize", "none").style("height", "20px").style("margin-left", "20px").style("width", "30px").html("1.0"); 
+  clusterControls.append("textarea").attr("id", "frontier").style("resize", "none").style("height", "20px").style("margin-left", "20px").style("width", "30px").html("1.0");
+  clusterControls.append("img").attr("class", "helpicon").attr("src", "helpq.png").attr("data", "voronoi").on("click", function() {contextualHelp('frontier')})
+
   modalContents.append("p").append("button").on("click", exportCartoCSV).html("Export to CSV")
   modalContents.append("p").append("a").attr("id", "downloadButton").style("display", "none").html("Download as CSV")
 
@@ -1179,14 +1158,6 @@ function addCartoRow(cartoSettings) {
   .attr("id", "newCanvas");
   
   context = canvas.node().getContext("2d");
-
-  /*
-  context.strokeStyle = 'blue';
-  context.fillStyle = 'none';
-  context.beginPath(), path2.context(context)(land), context.fill(), context.stroke();
-  
-  var drawRoutes = exposedroutes.objects.new_routes.geometries;
-  */
   
   var max = d3.max(exposedsites, function(p) {return parseFloat(p["cost"][0])});
   var mid = max / 2;
@@ -1208,16 +1179,28 @@ function addCartoRow(cartoSettings) {
   context.strokeStyle = 'black';
   context.stroke();
 
-  
-  for (x in exposedsites) {
-    
+  function drX(x) {
+    return (x * 4096) + 350;
   }
-  
+  function drY(y) {
+    return (y * 4096) + 1000;
+  }
+    d3.selectAll("path.links").each(function(d,i) {
+    context.strokeStyle = d.properties.fixedColor;
+    context.beginPath();
+      var vC = d.cartocoords;
+    context.moveTo(drX(vC[0][0]),drY(vC[0][1]));
+      var x = 1;
+      while (x < vC.length) {
+	context.lineTo(drX(vC[x][0]),drY(vC[x][1]));
+	x++;
+      }
+      context.stroke();
+    })
     d3.selectAll("g.site").each(function(d,i) {
-
     var siteCoords = d3.transform(d.cartoTranslate).translate;
-    siteCoords[0] = (siteCoords[0] * 4096) + 450;
-    siteCoords[1] = (siteCoords[1] * 4096) + 1000;
+    siteCoords[0] = drX(siteCoords[0]);
+    siteCoords[1] = drY(siteCoords[1]);
     
     context.strokeStyle = 'black';
     context.fillStyle = colorramp(d.cost[0]);
@@ -1227,7 +1210,7 @@ function addCartoRow(cartoSettings) {
 
     if (d3.select(this).select("text").empty() == false) {
     context.lineWidth = 1;
-    context.stroke();    
+    context.stroke();
     context.font = "11pt Helvetica";
     context.textAlign = 'center';
     context.strokeStyle = "rgba(255, 255, 255, 0.5)";
@@ -1433,21 +1416,13 @@ function scaled(incomingNumber) {
 
 function updateBGRoutes() {
   var activeTypes = [];
-  if (d3.select("#coastFlip").classed("active") || d3.select("#dayFlip").classed("active")) {
-    activeTypes.push("coastal");
-  }
-  if (d3.select("#riverFlip").classed("active")) {
-    activeTypes.push("upstream","downstream");    
-  }
-  if (d3.select("#seaFlip").classed("active")) {
-    activeTypes.push("overseas");
-  }
-  if (d3.select("#roadFlip").classed("active")) {
-    activeTypes.push("road");    
-  }
-  
+  d3.select("#modeForm").selectAll("input:checked").each(function () {
+    activeTypes = activeTypes.concat(this.value.split(","));
+  })
+
   d3.selectAll(".routes").style("display", function(d) {return activeTypes.indexOf(d.properties.t) > -1 ? "block" : "none"})
 
+  return activeTypes;
 }
 
 function brushed() {
@@ -1764,6 +1739,7 @@ function drawTimeline(selectedRoutes) {
   function timelineBy(distortionType) {
 
     if (distortionType == "perspective") {
+      roughYScale.range([canvMargin, canvHeight - canvMargin]);
       d3.selectAll("g.timelineSites")
       .transition()
       .duration(1000)
@@ -1775,11 +1751,15 @@ function drawTimeline(selectedRoutes) {
        .attr("d", function(d) {return roughLineConstructor(d.coordinates)})
 
       d3.select("#tlXLabel").text("Latitude")
+      d3.select("#tlYLabel").text("Longitude")
       
       updateAxis(roughXScale);
 
        return;
     }
+          d3.select("#tlYLabel").text("")
+      roughYScale.range([60, 60]);
+
     
       var totalTime = timelineRoutes.reduce(function(a,b) {return a + b.properties.segmentduration},0);
       var totalLength = timelineRoutes.reduce(function(a,b) {return a + b.properties.segmentlength},0);
@@ -1861,9 +1841,9 @@ function drawTimeline(selectedRoutes) {
   }
   function updateAxis(incXScale) {
       var tlXAxis = d3.svg.axis().scale(incXScale).orient("bottom").tickSize(-80).ticks(6).tickSubdivide(true);    
-      var tlYAxis = d3.svg.axis().scale(roughYScale).orient("left").tickSize(10).ticks(3).tickSubdivide(true);  
+//      var tlYAxis = d3.svg.axis().scale(roughYScale).orient("left").tickSize(10).ticks(3).tickSubdivide(true);  
       d3.select("#tlXAxis").transition().duration(1000).call(tlXAxis);
-      d3.select("#tlYAxis").transition().duration(1000).call(tlYAxis);
+//      d3.select("#tlYAxis").transition().duration(1000).call(tlYAxis);
       d3.selectAll(".tlAxis").selectAll("path").style("stroke", "none").style("fill", "#FAFAE6").style("opacity", .5)
       d3.selectAll(".tlAxis").selectAll("line").style("stroke", "black").style("stroke-width", "1px")
       d3.selectAll(".tlAxis").selectAll("line.minor").style("stroke", "gray").style("stroke-width", "1px").style("stroke-dasharray", "5 5")
@@ -2053,7 +2033,7 @@ function geoSankey(centerID) {
   newSettings["centerID"] = centerID;
   sankeyHash = {};
 
-    minardQuery = "sankey_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded+"&d="+newSettings.direction;
+//    minardQuery = "sankey_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded+"&d="+newSettings.direction;
 
   d3.csv(minardQuery, function(error,cartoData) {
     for (x in cartoData) {
@@ -2102,75 +2082,90 @@ function sankeyOff() {
       zoomComplete();
 }
 
-/*
-function trueSankey() {
-  d3.select("#sankeyChart").style("display", "block");
-  sankeyNodes = [];
-  sankeyLinks = [];
-  var sankeyHash = {};
-  var addedNodes = [];
-  for (x in exposedroutes.objects.new_routes.geometries) {
-    if (exposedroutes.objects.new_routes.geometries[x].properties.lastFreq > 0) {
-      if (addedNodes.indexOf(exposedroutes.objects.new_routes.geometries[x].properties.source.id) == -1) {
-	sankeyHash[exposedroutes.objects.new_routes.geometries[x].properties.source.id] = addedNodes.length;
-	addedNodes.push(exposedroutes.objects.new_routes.geometries[x].properties.source.id)
-	sankeyNodes.push({name: exposedroutes.objects.new_routes.geometries[x].properties.source.label})
-      }
-      if (addedNodes.indexOf(exposedroutes.objects.new_routes.geometries[x].properties.target.id) == -1) {
-	sankeyHash[exposedroutes.objects.new_routes.geometries[x].properties.target.id] = addedNodes.length;
-	addedNodes.push(exposedroutes.objects.new_routes.geometries[x].properties.target.id);
-	sankeyNodes.push({name: exposedroutes.objects.new_routes.geometries[x].properties.target.label})
-      }
-      var newLink = {source: sankeyHash[exposedroutes.objects.new_routes.geometries[x].properties.source.id], target: sankeyHash[exposedroutes.objects.new_routes.geometries[x].properties.target.id], value: exposedroutes.objects.new_routes.geometries[x].properties.lastFreq};
-      sankeyLinks.push(newLink);
-    }
+function contextualHelp(helpString) {
+  var helpText = "No help text found for " +helpString;
+  switch(helpString) {
+    case "transfer":
+      helpText = "<p>The transfer cost adds the set number of days every time there is a switch between modes of transport. Switches between modes occur in changes from road to river, river to sea, and so on.</p>"
+      break;
+    case "advanced":
+      helpText = "<p>Define your own custom costs for each mode.</p><p>This isn't currently operational.</p>"
+      break;      
+    case "voronoi":
+      helpText = "<p>Create regions based on the current site categorization. This allows you to see regions of similar cost or cluster.</p>"
+      break;      
+    case "cluster":
+      helpText = "<p>Indicate which sites are closer to centers. This is only useful after you've run two or more cartograms of the same priority.</p>"
+      break;
+    case "exportsvg":
+      helpText = "<p>Save your map as SVG</p>"
+      break;
+    case "route":
+      helpText = "<p>A route is the most efficient path based on your priority and restriction from the source site to the target site.</p>"
+      break;
+    case "cartogram":
+      helpText = "<p>A cartogram calculates the cost from the source site to all target sites based on the direction and priority and restrictions you have set.</p>"
+      break;
+    case "minard":
+      helpText = "<p>A Minard Diagram calculates all the most efficient routes to or from the selected site and aggregates those routes so that you can see the most used paths.</p>"
+      break;
+    case "":
+      helpText = "<p>Between the domains controlled by your selected centers lies a contested region we call the 'frontier'. A setting of 1.0 will have no frontier--lower the tolerance to increase the size of the frontier.</p>"
+      break;      
+    case "":
+      helpText = "<p></p>"
+      break;      
+  }
+  d3.select("#infopopup").style("display", "block");
+  d3.select("#infocontent").html(helpText);  
+}
+
+function createEssay(essayName) {
+  d3.select("#essayBox").style("display", "block");
+  d3.select('#essayContent').style('display','block');
+
+  var essayPath="building.html";
+    switch(essayName)
+  {
+    case 'intro':
+    essayPath="assets/introducing.html"
+    break;
+    case 'understand':
+    essayPath="assets/understanding.html"
+    break;
+    case 'build':
+    essayPath="assets/building.html"
+    break;
+    case 'tutorial':
+    essayPath="assets/using.html"
+    break;
+    case 'gallery':
+    essayPath="assets/gallery.html"
+    break;
+    case 'scholarship':
+    essayPath="assets/apply_TOC.html"
+    break;
+    case 'news':
+    essayPath="assets/new.html"
+    break;
+    case 'media':
+    essayPath="assets/media.html"
+    break;
+    case 'credits':
+    essayPath="assets/credits.html"
+    break;
+
   }
   
-    var intensityRamp = d3.scale.linear().domain([0,d3.max(sankeyLinks, function(d) {return d.value})]).range(["black", "red"])
-    
-    var sankey = d3.sankey()
-    .nodeWidth(1)
-    .nodePadding(1)
-    .size([4000, 4000]);
-
-  var path = sankey.link();
-
-  sankey
-      .nodes(sankeyNodes)
-      .links(sankeyLinks)
-      .layout(5);
   
-  d3.select("#sankeyChart").select("svg").append("g").attr("transform", "translate(20,20)").attr("id", "sankeyG");
+
   
-  d3.select("#sankeyG").selectAll(".link")
-      .data(sankeyLinks)
-    .enter().append("path")
-      .attr("class", "link")
-      .attr("d", sankey.link())
-      .style("stroke-width", function(d) {return d.dy})
-      .style("stroke-opacity", .5)
-      .style("fill", "none")
-      .style("stroke", function(d){return intensityRamp(d.value)})
-      .sort(function(a, b) { return b.dy - a.dy; })
-      .on("mouseover", function() {d3.select(this).style("stroke-opacity", .8)})
-      .on("mouseout", function() {d3.selectAll("path.link").style("stroke-opacity", .5)})
-
-  d3.select("#sankeyG").selectAll(".node")
-      .data(sankeyNodes)
-    .enter().append("g")
-      .attr("class", "node")
-      .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
-
-  d3.selectAll(".node").append("circle")
-      .attr("height", function(d) { return d.dy; })
-      .attr("r", function(d) { return d.dy / 2; })
-      .attr("cy", function(d) { return d.dy / 2; })
-      .style("fill", "pink")
-
-  d3.selectAll(".node").append("text")
-      .attr("x", 0)
-      .attr("y", function(d) { return d.dy / 2; })
-      .attr("text-anchor", "middle")
-      .text(function(d) { return d.name; })
+d3.text(essayPath, function(data) {
+  d3.select("#essayContent").html(data);
+})
 }
-*/
+
+function closeEssay() {
+  d3.select('#essayBox').style('display','none');
+  d3.select('#essayContent').style('display','none');
+}

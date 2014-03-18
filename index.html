@@ -6,7 +6,23 @@
 </head>
 
 <body>
-  <div id="topbar"><div id="title">ORBIS 2.0 (beta)</div><div id="authors"><a href="http://www.stanford.edu/~scheidel/">Walter Scheidel</a> <a href="https://dhs.stanford.edu">Elijah Meeks</a></div></div>
+  <div id="essayBox" onclick="closeEssay()">
+      <span id="infoclosebutton" style="top:5px;right:5px;z-index:1;" onclick="closeEssay()" >X</span>
+  </div>
+    <div id="essayContent">
+      
+    </div>
+  <div id="topbar"><div id="title">ORBIS 2.0 (beta)</div>
+    <div class="navtab" data="intro">Introducing ORBIS</div>
+    <div class="navtab" data="understand">Understanding ORBIS</div>
+    <div class="navtab" data="build">Building ORBIS</div>
+    <div class="navtab" data="tutorial">Using ORBIS</div>
+    <div class="navtab" data="gallery">Map Gallery</div>
+    <div class="navtab" data="scholarship">Research</div>
+    <div class="navtab" data="media">ORBIS in the Media</div>
+    <div class="navtab" data="credits">Credits</div>
+    <div class="navtab" data="news">What's New</div>
+    <div id="authors"><a href="http://www.stanford.edu/~scheidel/">Walter Scheidel</a> <a href="https://dhs.stanford.edu">Elijah Meeks</a></div></div>
   <div id="restoreButton" style="display: none;position: fixed; top:50px; left:30px;"><button style="cursor:pointer;" onclick="restoreControlsMap();">Controls</button></div>
   <div class="controlsDiv" style="position: fixed; bottom:10px; right:10px; background: white;">
     <a href="https://github.com/emeeks/orbis_v2"><img style="position: fixed; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
@@ -44,33 +60,47 @@
   </div>
     <div class="controlsDiv" style="position: fixed; top: 10%; right: 0px; height:100px; width: 200px; background:#F8F8F8;">
     <div class="buttonContainer" style="width: 180px;">
+      <p>
       <button onclick="zoomManual('in');">Zoom in</button>
       <button onclick="zoomManual('out');">Zoom out</button>
       <button onclick="fullscreenMap();">Full Screen</button>
+      </p>
+      <p>
       <button id="startBrushingButton" onclick="startBrushing();">Select Sites</button>
       <button id="stopBrushingButton" style="display:none;" onclick="stopBrushing();">Stop Selecting</button>
-      <button onclick="createVoronoi();">Regions</button>
-        <button class="controlButton" onclick="cartogramOff()">Reset Map</button>
-      <button onclick="clusterSitesUI()">Cluster</button>
+      </p>
+      <p>
+      <button onclick="createVoronoi();">Regions</button><img data="voronoi" class="helpicon" src="helpq.png" />
+      </p>
+      <p>
+      <button onclick="clusterSitesUI()">Cluster</button><img data="cluster" class="helpicon" src="helpq.png" />
+      </p>
+      <p>
+      <button onclick="exportSVG();">Export SVG</button><img data="exportsvg" class="helpicon" src="helpq.png" />
+      </p>
+      <p>
       <button onclick="">Tutorial</button>
       <button onclick="mapOff();">Terrain</button>
       <button onclick="temporaryLabels();">Labels</button>
+      </p>
+      <p>
+      <button class="controlButton" onclick="cartogramOff()">Cartogram Off</button>
       <button id="sankeyButton" style="display:none;" onclick="sankeyOff();">Minard Off</button>
-      <button onclick="exportSVG();">Export SVG</button>
+      </p>
       <button style="display:none;" onclick="testCommunities(exposedsites,exposedroutes,d3.selectAll('g.site'))">Network Communities</button>
       <p><a id="svgDownload">Download SVG</a></p>
       <p>You can also browse routes and cartograms run on ORBIS:</p>
       <button onclick="d3.select('#controlbar').style('display', 'none');d3.selectAll('#resultsTable').style('display', 'block');d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.routeRow').style('display','block');d3.selectAll('tr.routeRow').style('display','table-row');">Routes</button>
-      <button  onclick="d3.select('#controlbar').style('display', 'none');d3.selectAll('#resultsTable').style('display', 'block');d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.cartoRow').style('display','block');d3.selectAll('tr.cartoRow').style('display','table-row');">Cartograms</button>
+      <button onclick="d3.select('#controlbar').style('display', 'none');d3.selectAll('#resultsTable').style('display', 'block');d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.cartoRow').style('display','block');d3.selectAll('tr.cartoRow').style('display','table-row');">Cartograms</button>
       <p>Color the network by priority to get a sense of how the network changes based on priority.</p>
       <button id="eButton" class="routeLabelButton controlButton" onclick="colorBy('e')">Expense</button> <button id="sButton" class="routeLabelButton controlButton" onclick="colorBy('s')">Speed</button> <button id="tButton" class="routeLabelButton controlButton active" onclick="colorByType()">Type</button>
     </div>
     </div>
 
   <div class="controlsDiv" id="controlbar" style="position: fixed; top: 10%; left: 0px; height:80%; width: 230px; background:#F0F0F0;">
-    <a class="tab" onclick="switchControls('route');" style="left:5px;">Route</a>
-    <a class="tab backtab"  onclick="switchControls('cartogram');" style="left:59px;">Cartogram</a>
-    <a class="tab backtab"  onclick="switchControls('Minard');" style="left:147px;">Minard</a>
+    <a class="tab" onmouseover="contextualHelp('route')" onmouseout="d3.select('#infopopup').style('display','none')" onclick="switchControls('route');" style="left:5px;">Route</a>
+    <a class="tab backtab" onmouseover="contextualHelp('cartogram')" onmouseout="d3.select('#infopopup').style('display','none')" onclick="switchControls('cartogram');" style="left:59px;">Cartogram</a>
+    <a class="tab backtab" onmouseover="contextualHelp('minard')" onmouseout="d3.select('#infopopup').style('display','none')" onclick="switchControls('Minard');" style="left:147px;">Minard</a>
     <div class="buttonContainer" style="width:140px">
       <select id="sourceSelectButton" class="controlButton">
         </select> <select id="targetSelectButton" class="controlButton">
@@ -112,21 +142,49 @@
     </div>
 
     <div class="buttonContainer">
-      <button id="fPriority" class="controlButton priorityButton active" onclick="priorityClick(this)">Fastest</button> <button id="cPriority" class="controlButton priorityButton" onclick="priorityClick(this)">Cheapest</button> <button id="sPriority" class="controlButton priorityButton" onclick="priorityClick(this)">Shortest</button>
-    </div>
-
-    <div class="buttonContainer" style="width:210px">
-      <button id="roadFlip" class="controlButton active" onclick="flipButton(this);updateBGRoutes();">Road</button> <button id="riverFlip" class="controlButton active" onclick="flipButton(this);updateBGRoutes();">River</button> <button id="coastFlip" class="controlButton active" onclick="flipButton(this);updateBGRoutes();">Coastal Sea</button>
-      <button id="seaFlip" class="controlButton active" onclick="flipButton(this);updateBGRoutes();">Open Sea</button> <button id="dayFlip" class="controlButton" onclick="flipButton(this);updateBGRoutes();">Coastal (Daylight)</button>
+      <form id="priorityForm"><input type="radio" value="0" name="priority" checked>Fastest</input><input type="radio" value="1" name="priority">Cheapest</input><input type="radio" value="2" name="priority">Shortest</input></form>
     </div>
 
     <div class="buttonContainer">
-      <button id="aquaticSea" style="background:lightgreen;" class="controlButton" onclick="aquaticOptions(this)">Civilian River</button> <button id="aquaticRiver" style="background:lightgreen;" class="controlButton" onclick="aquaticOptions(this)">Fast Sea</button>
+  Modes</div>
+    <div class="buttonContainer" style="width:210px">
+      <form id="modeForm" onclick="updateBGRoutes();">
+        <div class="checkboxDiv">
+        <input type="checkbox" value="road" name="mode" checked>Road</input>
+        </div>
+        <div class="checkboxDiv">
+        <input id="riverModeCheck" type="checkbox" value="upstream,downstream" name="mode" checked>River</input>
+        </div>
+        <div class="checkboxDiv">
+        <input id="coastModeCheck" type="checkbox" value="coastal" name="mode" checked>Coastal</input>
+        </div>
+        <div class="checkboxDiv">
+        <input id="overseasModeCheck" type="checkbox" value="overseas" name="mode" checked>Open Sea</input>
+        </div>
+        <div class="checkboxDiv">
+        <input type="checkbox" value="hires" name="mode">High Resolution</input>
+        </div>
+      </form>
+
+    </div>
+    <div class="buttonContainer">
+Aquatic Options</div>
+
+    <div class="buttonContainer">
+      <input type="radio" name="riverSwitch" onclick="d3.select('#riverModeCheck').node().value = 'upstream,downstream';" checked>Civilian</input>
+      <input type="radio" name="riverSwitch" onclick="d3.select('#riverModeCheck').node().value = 'fastup,fastdown';">Military</input>
+    </div>
+    <div class="buttonContainer">
+      <input type="radio" name="seaSwitch" onclick="d3.select('#overseasModeCheck').node().value = 'overseas';d3.select('#coastModeCheck').node().value = 'coastal';" checked>Fast</input>
+      <input type="radio" name="seaSwitch" onclick="d3.select('#overseasModeCheck').node().value = 'slowsea';d3.select('#coastModeCheck').node().value = 'slowcoast';">Slow</input>
+      <input type="radio" name="seaSwitch" onclick="d3.select('#overseasModeCheck').node().value = '';d3.select('#coastModeCheck').node().value = 'dayfast';">Daylight</input>
+      <img data="shipmodel" class="helpicon" src="helpq.png" />
     </div>
 
     <div class="buttonContainer" style="width:190px">
       Vehicle Type <select id="vehicleSelectButton" style="width:170px;" class="controlButton" onclick="colorBy('e')">
-        </select> Transfer cost: <input type="text" style="width:30px;" id="transferCost" class="controlButton" onclick="colorByType()" /> days <button style="float:right;">Advanced</button> 
+        </select> Transfer cost: <input type="text" style="width:30px;" id="transferCost" class="controlButton" onclick="colorByType()" /> days<img data="transfer" class="helpicon" src="helpq.png" />
+        <button style="margin-left:50px;">Advanced</button><img data="advanced" class="helpicon" src="helpq.png" /> 
     </div>
 
     <div style="background:lightred" class="buttonContainer">
@@ -179,11 +237,11 @@
     <a id="tlbExpensed" class="tab backtab" style="left:263px;" >Expense (D)</a>
     <a id="tlbExpensew" class="tab backtab" style="left:359px;" >Expense (W)</a>
     <a id="tlbExpensec" class="tab backtab" style="left:459px;" >Expense (C)</a>
-    <a id="infoclosebutton" onclick="d3.select('#timelineViz').style('display','none');" >X</a>
+    <a id="infoclosebutton" onclick="d3.select('#routesContainer').style('opacity', 1);d3.select('#timelineViz').style('display','none');" >X</a>
 <svg id="timelineSVG" width="100%" height="100%">
   <g id="tlXAxis" class="tlAxis" transform="translate(0,100)"></g>
   <g id="tlYAxis" class="tlAxis" transform="translate(60,0)"></g>
-  <text x="10" y="15">Longitude</text>
+  <text id="tlYLabel" x="10" y="15">Longitude</text>
   <text id="tlXLabel" x="90" y="115">Latitude</text>
 </svg>
 
