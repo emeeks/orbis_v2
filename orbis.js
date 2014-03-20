@@ -22,10 +22,16 @@
 
 var typeHash = {road: "brown", overseas: "green", coastal: "#5CE68A", upstream: "blue", downstream: "blue", ferry: "purple"}
 
-var width = Math.max(1600),
-    height = Math.max(1000);
+svg = d3.select("#vizcontainer").append("svg")
+    .attr("id", "mapSVG")
+    .attr("width", "100%")
+    .attr("height", "100%")
+    .on("click", function() {d3.select(".modal").style("display", "none")});
 
-var tile = d3.geo.tile()
+height = parseFloat(document.getElementById("mapSVG").clientHeight);
+width = parseFloat(document.getElementById("mapSVG").clientWidth);
+
+tile = d3.geo.tile()
     .size([width, height]);
 
 projection = d3.geo.mercator()
@@ -56,12 +62,6 @@ projection
     .scale(1 / 2 / Math.PI)
     .translate([0, 0]);
 
-svg = d3.select("#vizcontainer").append("svg")
-    .attr("id", "mapSVG")
-    .attr("width", "100%")
-    .attr("height", "100%")
-    .on("click", function() {d3.select(".modal").style("display", "none")});
-
 var raster = svg.append("g").attr("id", "rasterG")
 
 var brushG = svg.append("g")
@@ -73,8 +73,8 @@ svg.append("g")
     .attr("class", "zoom")
     .call(zoom)
     .append("rect")
-    .attr("width", 1600)
-    .attr("height", 1000)
+    .attr("width", width)
+    .attr("height", height)
     .style("opacity", 0);
 
 //Class-based button functions
@@ -254,24 +254,8 @@ function startUp() {
   .style("display", function(d) {return d.label == "x" ? "none" : "block"})
   .html(function(d) {return d.label})
   .attr("value", function(d) {return d.id})
-
-  d3.select("#vehicleSelectButton").selectAll("option")
-  .data([{l: 'Foot (30km/day)',v: 'foot',p:"c"},
-	 {l: 'Oxcart (12km/day)',v: 'oxcart',p:"c"},
-	 {l: 'Porter (30km/day)',v: 'porter',p:"c"},
-	 {l: 'Horse (56km/day)',v: 'donkey',p:"c"},
-	 {l: 'Private (36km/day)',v: 'privateroutine',p:"c"},
-	 {l: 'Private (50km/day)',v: 'privateaccelerated',p:"c"},
-	 {l: 'Fast Carriage (67km/day)',v: 'fastcarriage',p:"c"},
-	 {l: 'Horse Relay (250km/day)',v: 'horserelay',p:"c"},
-	 {l: 'Rapid Military March (60km/day)',v: 'rapidmarch',p:"c"},
-	 {l: 'Donkey',v: 'donkey',p:"c"},
-	 {l: 'Wagon', v:'wagon',p:"c"},
-	 {l: 'Passenger', v:'carriage',p:"c"}])
-  .enter()
-  .append("option")
-  .html(function(d) {return d.l})
-  .attr("value", function(d,i) {return d.v})
+  
+  changePriority("f");
   
   document.getElementById("sourceSelectButton").value = 50327;
   document.getElementById("targetSelectButton").value = 50550;
@@ -1669,9 +1653,6 @@ function drawTimeline(selectedRoutes) {
   selectedRoutes.each(function(d) {
     timelineRoutes.push(d);
   })
-
-//  var timelineRoutes = simplifyLines(selectedRoutes)
-//  console.log(timelineRoutes)
   
   d3.select("#timelineViz").style("display", "block")
   var canvWidth = parseInt(d3.select("#timelineSVG").style("width"));
@@ -1801,7 +1782,6 @@ function drawTimeline(selectedRoutes) {
       var i = 0
       while (moreRoutes && i < 1000) {
 	for (x in timelineRoutes) {
-//	    console.log(timelineRoutes[x])
 	  if (calculatedRoutes.indexOf(timelineRoutes[x]) == -1) {
 	    if (timelineRoutes[x].properties.source == timelineRoutes[x].properties.target) {
 	      calculatedRoutes.push(timelineRoutes[x]);	      
@@ -2013,18 +1993,20 @@ function temporaryLabels() {
 }
 
 function zoomManual(zoomDirection) {
-  var cZoom = zoom.scale();
+
+
   if (zoomDirection == "in") {
-    zoom.scale(cZoom * 2);
-    zoom.translate([zoom.translate()[0] - (zoom.center()[0] /2), zoom.translate()[1] + (zoom.center()[1])])
-    console.log(zoom.center())
-//    zoom.center([500,500]);
+var newZoom = zoom.scale() * 1.5;
+var newX = ((zoom.translate()[0] - (width / 2)) * 1.5) + width / 2;
+var newY = ((zoom.translate()[1] - (height / 2)) * 1.5) + height / 2;
   }
   else {
-    zoom.scale(cZoom / 2);
-    zoom.translate([zoom.translate()[0] + (zoom.center()[0] /2), zoom.translate()[1] - (zoom.center()[1])])
-//    zoom.center([500,500]);
+var newZoom = zoom.scale() * .75;
+var newX = ((zoom.translate()[0] - (width / 2)) * .75) + width / 2;
+var newY = ((zoom.translate()[1] - (height / 2)) * .75) + height / 2;    
   }
+
+zoom.scale(newZoom).translate([newX,newY])
   zoomed();
 }
 
@@ -2112,6 +2094,9 @@ function contextualHelp(helpString) {
     case "":
       helpText = "<p>Between the domains controlled by your selected centers lies a contested region we call the 'frontier'. A setting of 1.0 will have no frontier--lower the tolerance to increase the size of the frontier.</p>"
       break;      
+    case "shipmodel":
+      helpText = "<p>ORBIS sea routes were run with two models, a fast ship model and a slow ship model. They have slightly different routes and travel on coastal and overseas routes using the slow ship model takes more time.</p><p>The Daylight option restricts sailing to coastal routes and the fast ship model. Sea routes take longer with the Daylight mode because sailing only takes place during daylight hours, which is more restrictive during the winter and less restrictive during the summer."
+      break;      
     case "":
       helpText = "<p></p>"
       break;      
@@ -2169,3 +2154,62 @@ function closeEssay() {
   d3.select('#essayBox').style('display','none');
   d3.select('#essayContent').style('display','none');
 }
+
+function changePriority(chPriority) {
+  var priorityTypes = [{l: 'Foot (30km/day)',v: 'foot',p:"f"},
+	 {l: 'Oxcart (12km/day)',v: 'oxcart',p:"f"},
+	 {l: 'Porter (30km/day)',v: 'porter',p:"f"},
+	 {l: 'Horse (56km/day)',v: 'horse',p:"f"},
+	 {l: 'Private (36km/day)',v: 'privateroutine',p:"f"},
+	 {l: 'Private (50km/day)',v: 'privateaccelerated',p:"f"},
+	 {l: 'Fast Carriage (67km/day)',v: 'fastcarriage',p:"f"},
+	 {l: 'Horse Relay (250km/day)',v: 'horserelay',p:"f"},
+	 {l: 'Rapid Military March (60km/day)',v: 'rapidmarch',p:"f"},
+	 {l: 'Donkey',v: 'donkey',p:"c"},
+	 {l: 'Wagon', v:'wagon',p:"c"},
+	 {l: 'Passenger', v:'carriage',p:"c"}]
+
+  d3.selectAll("option.vehicleType").remove();
+  d3.select("#vehicleSelectButton").selectAll("option")
+  .data(priorityTypes.filter(function(d) {return d.p==chPriority}))
+  .enter()
+  .append("option")
+  .html(function(d) {return d.l})
+  .attr("value", function(d,i) {return d.v})
+  .attr("class", "vehicleType");
+
+    if (chPriority == "f") {
+      document.getElementById("vehicleSelectButton").value = 'foot';
+  }
+  else {
+      document.getElementById("vehicleSelectButton").value = 'donkey';
+  }
+
+}
+
+window.onresize = function(event) {
+	resizeMap();
+}
+
+function resizeMap() {
+	height = parseFloat(document.getElementById("mapSVG").clientHeight);
+	width = parseFloat(document.getElementById("mapSVG").clientWidth);
+	tile.size([width, height]);
+	d3.select("g.zoom").attr("height", height).attr("width", width)
+
+}
+
+function zoomLocation(p) {
+      return [ (p[0] - zoom.translate()[0]) / zoom.scale(), (p[1] - zoom.translate()[1]) / zoom.scale() ];
+    }
+    
+function zoomPoint(l) {
+      return [ l[0] * zoom.scale() + zoom.translate()[0], l[1] * zoom.scale() + zoom.translate()[1] ];
+    }
+    
+function zoomTranslateTo(p, l) {
+      l = zoomPoint(l);
+      var x = zoom.translate()[0] + p[0] - l[0];
+      var y = zoom.translate()[0] + p[1] - l[1];
+      return [x,y]
+    }

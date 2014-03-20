@@ -336,7 +336,7 @@ padding: 6px;
   left: 0;
   padding: 0 20px;
   font-size: 30px;
-  color: white;
+  color: E7D19A;
 }
 
 .navtab {
@@ -378,6 +378,43 @@ padding: 6px;
   z-index: 99;
   overflow: auto;
   display: none;
-
-  
 }
+
+/* Imported */
+.rightcol {
+	padding: 75 0 0 0;	float: right;	width: 300px;
+	height: 100%;	margin-top:25px;}
+        
+        .leftcol {width:620px;}
+
+
+div .righttoc {
+    width: 285px; margin-top: 10px; color:#333;
+	border:thin #434A44 dotted; 
+	float: right; font-size: .9em; padding: 4px;}}
+.rightcol a {text-decoration:none; color: #336699;}
+div .rightpull {
+    margin-top: 10px; color:#333; font-family:Verdana, Geneva, sans-serif;
+	border:thin #993333 dotted; background-color: #eeeee0;
+	float: right; padding: 18px; font-size:small;}
+div .rightpic {
+    width: 280px; margin: 10px; color:#333;
+	border:thin #993333 dotted; 
+	float: right; font-size: .8em; padding:6 18 18 18;}
+div .leftpic {
+    width: 300px; margin: 10px; 	color:#333;
+	border:thin #993333 dotted; 
+	float: left; font-size: .8em; padding:6 18 18 18;}
+div .inlinepic {
+    width: 99%; margin: 10px;	color:#333;
+	border:thin #993333 dotted; padding: 6px 0px;
+	font-size: .8em; text-align:center;}
+
+div .inlinepic_plain {
+    width: 95%; margin: 10px;	color:#333;
+	font-size: .8em; text-align:center;}
+.caption { font-family:Verdana, Geneva, sans-serif; font-size:.9em; text-align:center; color:#333; padding-left:2px;}
+
+#intro p { margin-bottom: 2px;}
+
+ 
