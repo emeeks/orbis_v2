@@ -11,7 +11,7 @@
   lastCartoRan = 0;
   priorityName = ["Days", "Denarii", "KM"];
   priorityType = ["Fastest", "Cheapest", "Shortest"];
-  priorityColor = ["#FF1493", "#00FF7F", "#FFFF00"];
+  priorityColor = ["#FF680A", "#64FF0A", "#FFCE0A"];
   var monthNames = [ "Zeroary", "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December" ];
   settingsID = 0;
@@ -1607,6 +1607,8 @@ function createVoronoi() {
 
   var forVoronoi = [];
   
+  exposedFV = forVoronoi;
+  
   d3.selectAll(".sitecirctop")
   .filter(function() {return !cartogramRunning || d3.select(this).style("fill") != "#d3d3d3"})
   .each(function(el) {
@@ -1646,10 +1648,7 @@ function createVoronoi() {
   }
 
     forVoronoi.push({x: vxScale(.3), y: vyScale(.05)})
-    colorArray.push("none");    
-
-    forVoronoi.push({x: vxScale(.98), y: vyScale(.35)})
-    colorArray.push("none");    
+    colorArray.push("none");       
 
     forVoronoi.push({x: vxScale(.97), y: vyScale(.7)})
     colorArray.push("none");    
