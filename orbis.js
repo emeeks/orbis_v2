@@ -2,7 +2,7 @@
   cartogramRunning = false;
   voronoiRunning = false;
   routeSegments = [];
-  excludedSites = [999];
+  excludedSites = [99999];
   //This is an array to hold the carto settings for reference by the clustering function
   cartogramsRun = [];
   routesRun = [];
@@ -10,6 +10,8 @@
   currentRoute = 0;
   lastCartoRan = 0;
   priorityName = ["Days", "Denarii", "KM"];
+  priorityType = ["Fastest", "Cheapest", "Shortest"];
+  priorityColor = ["#FF1493", "#00FF7F", "#FFFF00"];
   var monthNames = [ "Zeroary", "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December" ];
   settingsID = 0;
@@ -18,15 +20,26 @@
   sankeyHash = {};
   routeOpacity = false;
   
-  betweennessScale = d3.scale.linear().domain([0,1,2]).range([0,10,30])
+  betweennessScale = d3.scale.linear().domain([0,0,0]).range([0,0,0])
 
-var typeHash = {road: "brown", overseas: "green", coastal: "#5CE68A", upstream: "blue", downstream: "blue", ferry: "purple"}
+//var typeHash = {road: "brown", overseas: "green", dayfast: "#5CE68A", dayslow: "#5CE68A", slowcoast: "#5CE68A", coastal: "#5CE68A", upstream: "blue", downstream: "blue", fastup: "blue", fastdown: "blue", ferry: "#5CE68A"}
+var typeHash = {road: "#997A00", overseas: "#006699", dayfast: "#5CE68A", dayslow: "#5CE68A", slowcoast: "#5CE68A", coastal: "#5CE68A", upstream: "#5C85FF", downstream: "#5C85FF", fastup: "#99E6FF", fastdown: "#99E6FF", ferry: "#5CE68A"}
+
+window.onkeyup = function(e) {
+   var key = e.keyCode ? e.keyCode : e.which;
+   if (key == 27) {
+    closeEssay();
+   }
+}
 
 svg = d3.select("#vizcontainer").append("svg")
     .attr("id", "mapSVG")
     .attr("width", "100%")
     .attr("height", "100%")
-    .on("click", function() {d3.select(".modal").style("display", "none")});
+    .on("click", function() {d3.select(".modal").style("display", "none")})
+    .on("mousedown", function() {d3.select(this).style("cursor", "move")})
+    .on("mouseup", function() {d3.select(this).style("cursor", "default")})
+	;
 
 height = parseFloat(document.getElementById("mapSVG").clientHeight);
 width = parseFloat(document.getElementById("mapSVG").clientWidth);
@@ -35,7 +48,7 @@ tile = d3.geo.tile()
     .size([width, height]);
 
 projection = d3.geo.mercator()
-    .scale((1 << 12) / 2 / Math.PI)
+    .scale((1 << 13) / 2 / Math.PI)
     .translate([width / 2, height / 2]);
 
 var center = projection([12, 42]);
@@ -91,20 +104,20 @@ d3.selectAll(".helpicon").on("click", function() {contextualHelp(d3.select(this)
 
 colorRamp=d3.scale.linear().domain([0,1,5,10]).range(["#004e99","#7e8fc3","#c28711","#ad5041"])
 
-d3.json("routes_topo.json", function(error, routes) {
+d3.json("new_routes.topojson", function(error, routes) {
 
 d3.json("topocoast.json", function(error, coast) {
   exposedCoast = coast;
 })
 
   exposedroutes = routes;
-  exposedGeoms = topojson.feature(routes, routes.objects.new_routes).features;
+  exposedGeoms = topojson.feature(routes, routes.objects.base_routes).features;
 
   
   var routeG = svg.append("g").attr("id", "routesContainer")
 
   routeG.selectAll(".routes")
-  .data(topojson.feature(routes, routes.objects.new_routes).features)
+  .data(topojson.feature(routes, routes.objects.base_routes).features)
   .enter()
   .append("path")
   .attr("class", "routes links")
@@ -123,6 +136,7 @@ simplifiedGeoms = simplifyLines(d3.selectAll("path.routes"));
 d3.csv("sites.csv", function(error, sites) {
   exposedsites = sites;
   siteHash = {};
+  siteLabelHash = {};
   var sitesG = svg.append("g").attr("id","sitesG")
         .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
   for (x in exposedsites) {
@@ -132,10 +146,11 @@ d3.csv("sites.csv", function(error, sites) {
       exposedsites[x].nearestCluster = 0;
       exposedsites[x].betweenness = 0;
       siteHash[exposedsites[x].id] = exposedsites[x];
+      siteLabelHash[exposedsites[x].label] = exposedsites[x].id;
     }
   }
   
-    exposedroutes.objects.new_routes.geometries.forEach(function(el) {
+    exposedroutes.objects.base_routes.geometries.forEach(function(el) {
 
       //Adjust for metanodes
       if (el.properties.t == "road") {
@@ -161,7 +176,7 @@ d3.csv("sites.csv", function(error, sites) {
     return 0;
     });
   var osites = sitesG.selectAll(".site")
-  .data(exposedsites)
+  .data(exposedsites.filter(function(d) {return d.rank > 10}))
   .enter()
   .append("g")
   .attr("id", function(d) {return "site_g_" + d.id})
@@ -203,18 +218,22 @@ d3.csv("sites.csv", function(error, sites) {
   
   osites
   .append("circle")
-  .attr("r", scaled(30))
+  .attr("r", scaled(40))
+  .style("fill", "white")
+  .style("stroke-width", scaled(1))
+  .style("stroke", "black")
+  .style("stroke-width", scaled(1))
   .attr("class", "sitecirc")
 
   osites
   .append("circle")
-  .attr("r", scaled(25))
-  .attr("cx", scaled(-2))
-  .attr("cy", scaled(-2))
+  .attr("r", scaled(35))
   .style("fill", "#ad5041")
   .attr("class", "sitecirctop")
+  .attr("id", function(d,i) {return "sct" + d.id})
 
-var initialLabels = [50024,50017,50107,50108,50429,50235,50129,50341,50327]
+
+var initialLabels = [50024,50017,50107,50429,50235,50129,50327,50359,50379,50124,50549,50213]
 for (x in initialLabels) {
 document.getElementById("site_g_"+initialLabels[x]).parentNode.appendChild(document.getElementById("site_g_"+initialLabels[x]));
 siteLabel("site_g_"+initialLabels[x]);
@@ -236,10 +255,23 @@ siteLabel("site_g_"+initialLabels[x]);
 
 function startUp() {
   
-  orbisTutorial = new tut;
-  tutorial(1);
+  var sBut = d3.select("#sourceSelectParent");
+/*  
+  sBut.append("input")
+  .attr("type", "text")
+  .attr("list", "cities")
+  .attr("id", "sourceSelectInput");
   
-    d3.select("#sourceSelectButton").selectAll("option")
+  sBut.append("datalist")
+  .attr("id", "cities")
+  .style("height", "50px")
+  .style("scroll", "auto")
+  */
+
+  sBut.append("select")
+    .attr("id", "sourceSelectButton")
+    .attr("class", "controlButton")
+    .selectAll("option")
   .data(exposedsites.filter(function (el) {return el.label != "x"}))
   .enter()
   .append("option")
@@ -254,16 +286,18 @@ function startUp() {
   .style("display", function(d) {return d.label == "x" ? "none" : "block"})
   .html(function(d) {return d.label})
   .attr("value", function(d) {return d.id})
-  
+
   changePriority("f");
   
   document.getElementById("sourceSelectButton").value = 50327;
-  document.getElementById("targetSelectButton").value = 50550;
+//  document.getElementById("sourceSelectInput").value = "Roma";
+  document.getElementById("targetSelectButton").value = 50129;
+  
+  createEssay("home")
 
 }
 
 function zoomComplete() {
-  
   d3.selectAll(".results").style("display", "block")
   d3.selectAll(".routes")
       .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
@@ -272,19 +306,21 @@ function zoomComplete() {
 
   d3.selectAll(".results")
       .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
-      .style("stroke-width", scaled(4));
+      .style("stroke", function(d) {return d.properties.fixedColor})
+      .style("stroke-width", scaled(8));
 }
 
 function zoomed() {
     var downloadButton = d3.select("#svgDownload").style("display", "none");
 
   if (voronoiRunning == true) {
-    clearVoronoi();
+    d3.selectAll("path.voronoi")
+    .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
+    .style("stroke-width", function(d) {return scaled(1)});
   }
 
   d3.selectAll(".results").style("display", "none")
   d3.selectAll(".modal").style("display", "none");
-//  d3.selectAll(".results").style("stroke", "white")
 
 	clearTimeout(refreshTimer);
 	refreshTimer = setTimeout('zoomComplete()', 100);
@@ -318,18 +354,25 @@ d3.select("#sitesG")
     .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
   
 d3.selectAll(".sitecirc")
-    .attr("r", function(d) {return scaled((betweennessScale(d.betweenness)) + 20)});
+  .attr("r", function(d) {return scaled(24)})
+  .style("stroke-width", scaled(4))
 
 d3.selectAll(".sitecirctop")
-  .attr("id", function(d,i) {return "sct" + d.id})
-  .attr("r", function(d) {return scaled((betweennessScale(d.betweenness)) + 16)})
-  .attr("cx", scaled(-2))
-  .attr("cy", scaled(-2));
+  .attr("r", function(d) {return scaled(20)})
+  ;
+
+  d3.selectAll(".sourcecirc")
+  .attr("r", function(d) {return scaled(34)})
+  .style("stroke-width", scaled(8))
+
+d3.selectAll(".targetcirc")
+  .attr("r", function(d) {return scaled(28)})
+  .style("stroke-width", scaled(14))
 
 d3.selectAll(".slabel")
   .attr("x", scaled(2))
   .attr("y", scaled(-60))
-  .attr("font-size", scaled(100))
+  .style("font-size", function() {return d3.select(this).classed("underlined") ? scaled(150) : scaled(100)})
   .style("stroke-width", scaled(25));
   
     d3.selectAll(".routes")
@@ -340,7 +383,9 @@ d3.selectAll(".slabel")
 
 function colorBy(attribute) {
   resetButtons("routeLabelButton");
-  d3.select("#"+attribute+"Button").classed("active", true)
+  d3.select("#"+attribute+"Button").classed("active", true);
+  var max = d3.max(exposedroutes.objects.base_routes.geometries, function(d) {return d.properties[attribute]})
+  colorRamp=d3.scale.quantize().domain([max,0]).range(colorbrewer.Spectral[8]);
   d3.selectAll(".routes")
   .transition().duration(500).style("stroke", function(d) {return colorRamp(d.properties[attribute])})
 }
@@ -357,7 +402,6 @@ function colorByType(instant) {
   }
 }
 function siteClick(d,i) {
-  this.parentNode.appendChild(this);
   d3.event.stopPropagation();
   var coords = d3.mouse(document.body);
   var modalContents = d3.select("#sitemodal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
@@ -366,22 +410,31 @@ function siteClick(d,i) {
     modalContents.append("p").attr("id","showLabelButton").style("display","none").html("<button onclick='siteLabel(\"site_g_"+d.id+"\")'>Display Label</button>")
     modalContents.append("p").attr("id","hideLabelButton").style("display","none").html("<button onclick='removeSiteLabel(\"site_g_"+d.id+"\")'>Remove Label</button>")
 
-  if (d3.select("#site_g_"+d.id).selectAll("text").empty()) {
+  if (d3.select("#site_g_"+d.id).selectAll(".slabel").empty()) {
     d3.select("#showLabelButton").style("display","block")
   }
   else {
     d3.select("#hideLabelButton").style("display","block")
   }
   modalContents.append("p").html("<button id='incExcButton'>" + (excludedSites.indexOf(d.id) > -1 ? "Include Site" : "Exclude Site") + "</button>").on("click", function() {onOffSite(d)})
-  modalContents.append("p").html("<button onclick='d3.select(this).remove();cartogram("+d.id+")'>Cartogram</button>")
-  modalContents.append("p").html("<button onclick='d3.select(this).remove();geoSankey("+d.id+")'>Minard Diagram</button>")
+  modalContents.append("p").append("button").html("Route from here").on("click", function() {document.getElementById("sourceSelectButton").value = d.id;})
+  modalContents.append("p").append("button").html("Route to here").on("click", function() {document.getElementById("targetSelectButton").value = d.id;})
+  
+  modalContents.append("p").html("<button onclick='d3.select(\"#controlbar\").selectAll(\".tab\").classed(\"backtab\",true);d3.select(\"#cartTab\").classed(\"backtab\",false);switchControls(\"cartogram\");d3.select(this).remove();cartogram("+d.id+")'>Network</button>")
+  modalContents.append("p").html("<button onclick='d3.select(\"#controlbar\").selectAll(\".tab\").classed(\"backtab\",true);d3.select(\"#minTab\").classed(\"backtab\",false);switchControls(\"Minard\");d3.select(this).remove();geoSankey("+d.id+")'>Flow</button>")
   var costList = modalContents.append("ol")
   costList.selectAll("li").data(d.cost).enter().append("li").html(function(p) {return p});
 }
 
 function siteOver(d,i) {
-//  d3.select("#site_g_"+d.id+"_label").transition().duration(500).style("stroke-width", scaled(75))
+  this.parentNode.appendChild(this);
   
+
+//  d3.select("#site_g_"+d.id+"_label").transition().duration(500).style("stroke-width", scaled(75))
+  if (!d3.select(this).select("text").empty()) {
+  d3.select(this).select(".sitecirctop").transition().duration(500).attr("r", scaled(2)).transition().duration(500).attr("r", scaled(20))
+    return;
+  }
   d3.select("#site_g_"+d.id).append('text').attr("class","hoverlabel").text(d.label)
   .attr("x", scaled(2))
   .attr("y", scaled(-60))
@@ -403,25 +456,40 @@ function siteOver(d,i) {
 function siteOut(d,i) {
 //  d3.select("#site_g_"+d.id+"_label").transition().duration(500).style("stroke-width", scaled(25));
   d3.selectAll(".hoverlabel").remove();
+  d3.selectAll("g.site").each(function() {
+    d3.select(this).selectAll("text").size() > 0 ? this.parentNode.appendChild(this) : null;
+  })
 }
 
-function siteLabel(siteID) {
+function siteLabel(siteID, underlined) {
+  var xC = "";
+  var xF = 100
+  if (underlined){
+    removeSiteLabel(siteID);
+    xC = " underlined";
+    xF = 150;
+    console.log(siteID)
+    console.log(d3.select("#"+siteID))
+    d3.select("#"+siteID).node().parentNode.appendChild(d3.select("#"+siteID).node());
+    d3.select("#"+siteID).select(".sitecirc").classed("sourcecirc", "true");
+
+  }
   d3.select("#showLabelButton").style("display","none")
   d3.select("#hideLabelButton").style("display","block")
-  d3.select("#"+siteID).append('text').attr("class","slabel").text(function(d) {return d.label})
+  d3.select("#"+siteID).append('text').attr("class","slabel" + xC).text(function(d) {return d.label})
   .attr("x", scaled(2))
   .attr("y", scaled(-60))
-  .attr("font-size", scaled(100))
+  .attr("font-size", scaled(xF))
   .attr("text-anchor", "middle")
   .attr("id", siteID + "_label")
   .style("stroke-width", scaled(25))
   .style("stroke", "white")
   .style("opacity", .75)
   .style("pointer-events","none");
-  d3.select("#"+siteID).append('text').attr("class","slabel").text(function(d) {return d.label})
+  d3.select("#"+siteID).append('text').attr("class","slabel" + xC).text(function(d) {return d.label})
   .attr("x", scaled(2))
   .attr("y", scaled(-60))
-  .attr("font-size", scaled(100))
+  .attr("font-size", scaled(xF))
   .attr("text-anchor", "middle")
   .style("pointer-events","none")
   .style("stroke", "none");
@@ -478,11 +546,14 @@ function cartogram(centerID) {
   var newSettings = getSettings();
   newSettings["centerID"] = centerID;
   cartogramsRun.push(newSettings)
-  
+    d3.select(".calculateDisable").style("display", "block");
 //  cartoQuery = "new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded+"&d="+newSettings.direction;
-
+console.log(cartoQuery);
+  d3.selectAll("span.emptyHistory").remove();
+  _gaq.push(['_trackEvent', 'interaction', "cartogram", centerID]);
+  
   d3.csv(cartoQuery, function(error,cartoData) {
-
+    d3.select(".calculateDisable").style("display", "none");
   exposedCarto = cartoData;
 
   for (x in exposedsites) {
@@ -507,18 +578,25 @@ function cartogram(centerID) {
 
 function updateSiteLegend() {
   d3.selectAll(".sitecirctop").filter(function(d) {return d["cost"][lastCartoRan] >= 0}).style("fill", function(d) {return cartoLegend.scale(d["cost"][lastCartoRan])})
+  if (voronoiRunning == true) {
+    clearVoronoi();
+    createVoronoi();
+  }
 }
 
 function runCarto(centerX,centerY,centerID, cartoPosition) {
-    lastCartoRan = cartoPosition;
+  clearVoronoi();
+  lastCartoRan = cartoPosition;
+  d3.selectAll(".slabel").classed("underlined", false).style("font-size", scaled(100));
+  d3.selectAll(".sitecirc").classed("sourcecirc", false);
+  d3.selectAll(".sitecirc").classed("targetcirc", false);
+  siteLabel("site_g_"+centerID,true);
 
 d3.selectAll(".routes").filter(function(el) {return el.properties.source == undefined || el.properties.target == undefined ? this : null}).remove();
 
   d3.select("#sitemodal").style("display", "none");
   d3.select("#hullButton").style("display","none");
   
-  cartogramRunning = true;
-
   max = d3.max(exposedsites, function(el) {return el["cost"][cartoPosition]});
   mid = max / 2;
 
@@ -529,6 +607,7 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   d3.selectAll("g.legend").remove();
   cartoLegend = d3.svg.legend().units(priorityName[cartogramsRun[cartoPosition].priority]).cellWidth(80).cellHeight(25).inputScale(cartoRamp).cellStepping(max / 50);
   d3.select('#legendmodal').style('display','block').classed("horizontal", false);
+  d3.select('#legendDisplayButton').style('display','none');
   d3.select("#legendSVG").append("g").attr("transform", "translate(0,30)").attr("class", "legend").call(cartoLegend);
 
   d3.select("g.legend").selectAll("g")
@@ -538,10 +617,20 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   .on("mouseout", function () {d3.selectAll("g.Voronoi").style("opacity", .8);
   })
   ;
-    
-  d3.selectAll("g.site").style("display", function(d) {return d.cost[cartoPosition] == -1 ? "none" : "block"})
-  d3.selectAll("path.links").style("display", function(d) {return d.properties.source.cost[cartoPosition] == -1 || d.properties.target.cost[cartoPosition] == -1 ? "none" : "block"})
   
+  svg.selectAll(".sitecirctop").filter(function(d) {return d.cost[lastCartoRan] == -1 ? null : this})
+  .transition()
+  .duration(3000)
+  .style("fill", function(d) { return (cartoRamp(d["cost"][cartoPosition]))});
+  
+  d3.selectAll("g.site").filter(function(d) {return d.cost[lastCartoRan] == -1 ? this : null}).select(".sitecirctop").style("fill", "lightgray")
+
+  d3.select("#cartoOnButton").on("click", function() {cartogramOn(cartoPosition,centerX,centerY)}).style("display", "block");
+  zoomed();
+}
+
+function cartogramOn(cartoPosition, centerX,centerY) {
+  cartogramRunning = true;
   var minX = d3.min(exposedsites, function(el) {return projection([el.x,el.y])[0]})
   var maxX = d3.max(exposedsites, function(el) {return projection([el.x,el.y])[0]})
   var minY = d3.min(exposedsites, function(el) {return projection([el.x,el.y])[1]})
@@ -571,6 +660,10 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
     return (ratio * ydiff * .0001) + projectedCoordsCen[1];
   }
 
+    d3.selectAll("g.site").style("display", function(d) {return d.cost[cartoPosition] == -1 ? "none" : "block"})
+  d3.selectAll("path.links").style("display", function(d) {return d.properties.source.cost[cartoPosition] == -1 || d.properties.target.cost[cartoPosition] == -1 ? "none" : "block"})
+
+  
   svg.selectAll("g.site")
   .each(function(d) {
     d.cartoTranslate = "translate("+ (findx(d["cost"][cartoPosition],d.x,d.y,centerX,centerY))  + "," + (findy(d["cost"][cartoPosition],d.x,d.y,centerX,centerY)) + ")scale(.159)";
@@ -595,18 +688,13 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   .transition()
   .duration(3000)
   .attr("transform", function(d) {return d.cartoTranslate;});
-
-  svg.selectAll(".sitecirctop")
-  .transition()
-  .duration(3000)
-  .style("fill", function(d) { return (cartoRamp(d["cost"][cartoPosition]))});
   
   d3.selectAll(".links").transition().duration(3000).attr("d", function(d) {return (d.cartoD ? d.cartoD : "")})
-
+  d3.select("#cartoOffButton").style("display", "inline")
 }
 
 function cartogramOff() {
-  
+  clearVoronoi();
   d3.selectAll("g.legendRing").remove();
   d3.select("#sitemodal").style("display", "none");
   cartogramRunning = false;
@@ -630,15 +718,22 @@ function cartogramOff() {
   .attr("d", path)
 
   zoomed();
+  d3.select("#cartoOffButton").style("display", "none")
+
 }
 
 function calculateRoute() {
   var newSettings = getSettings();
   routesRun.splice(0,0,newSettings)
 
+  d3.select(".calculateDisable").style("display", "block");
 //  routeQuery = "new_route.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&s="+newSettings.source+"&t="+newSettings.target+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
+  d3.selectAll("span.emptyHistory").remove();
 
+  _gaq.push(['_trackEvent', 'interaction', "route", newSettings.source+"|"+newSettings.target]);
+  
   d3.json(routeQuery, function(error,routeData) {
+    d3.select(".calculateDisable").style("display", "none");
     exposedNewData = routeData;
     // Each segment needs to be tagged with the current route id so that later we can pull them out to measure them and show them
     for (x in routeData.features) {
@@ -656,6 +751,7 @@ function calculateRoute() {
       routeData.features[x].geometry.source = siteHash[realSource];
       routeData.features[x].geometry.target = siteHash[realTarget];
       routeData.features[x].coordinates = routeData.features[x].geometry.coordinates;
+      routeData.features[x].cartocoords = routeData.features[x].geometry.coordinates;
       routeSegments.push(routeData.features[x])
     }
 
@@ -675,6 +771,7 @@ function calculateRoute() {
   .on("mouseover", resultsOver)
   .on("mouseout", resultsOut)
   .style("opacity", 1)
+  .each(function(d) {d.properties.fixedColor = priorityColor[newSettings.priority]})
 
     zoomed();
     
@@ -703,8 +800,9 @@ function calculateRoute() {
 function getSettings() {
 
   var sourceID = document.getElementById("sourceSelectButton").value;
+//  var sourceID = siteLabelHash[document.getElementById("sourceSelectInput").value];
+
   var targetID = document.getElementById("targetSelectButton").value;
-  var monthID = d3.selectAll("#monthPicker > input").filter(function() {return d3.select(this).property("checked") ? this : null}).attr("value");
   var priority = d3.select("#priorityForm > input:checked").node().value;
 
   var modeList = '';
@@ -712,7 +810,7 @@ function getSettings() {
   var cartoDirection = 0;
 
   var monthID = d3.selectAll("#monthPicker > input").filter(function() {return d3.select(this).property("checked") ? this : null}).attr("value");
-  var cartoDirection = d3.selectAll("#directionPicker > input").filter(function() {return d3.select(this).property("checked") ? this : null}).attr("value");
+  var cartoDirection = d3.selectAll("#directionPicker > div > input").filter(function() {return d3.select(this).property("checked") ? this : null}).attr("value");
 
   var vehicleType = document.getElementById("vehicleSelectButton").value;
   var transferCost = parseFloat(document.getElementById("transferCost").value);
@@ -722,7 +820,7 @@ function getSettings() {
 
   modeList = modeArray.join("");
   
-  var excludedIDs = excludedSites.toString();
+  var excludedIDs = "999," + excludedSites.toString();
   settingsID++;
  return {id: settingsID, modes: modeList, modeArr: modeArray, source: sourceID, target: targetID, month: monthID, priority: priority, vehicle: vehicleType, transfer: transferCost, excluded: excludedIDs, direction: cartoDirection}
   
@@ -738,7 +836,7 @@ function routeClick(d,i) {
   modalContents.append("p").html("Length: " + d.properties.segmentlength);
   modalContents.append("p").html("Expense (D): " + d.properties.segmentexpense_d);
   modalContents.append("p").html("Expense (W): " + d.properties.segmentexpense_w);
-  modalContents.append("p").html("Expense (C): " + d.properties.segmentexpense_c);
+  modalContents.append("p").html("Expense (PC): " + d.properties.segmentexpense_c);
   populateRouteDialogue(routesRun[d.properties.routeID].source,routesRun[d.properties.routeID].target,d.properties.routeID);
   d3.select(this).style("stroke", "red")
 
@@ -752,13 +850,21 @@ function idToLabel(inID) {
 }
 
 function populateRouteDialogue(inSource,inTarget,inRouteID) {
+
+  d3.selectAll(".sitecirc").classed("sourcecirc", false);
+  d3.selectAll(".sitecirc").classed("targetcirc", false);
+  d3.selectAll(".slabel").classed("underlined", false);
+  siteLabel("site_g_"+inSource,true);
+  siteLabel("site_g_"+inTarget,true);
+
+  d3.select("#site_g_"+inTarget).select(".sitecirc").classed("targetcirc", "true");
   
+  var tRoute = routesRun[inRouteID];
   inSource = idToLabel(inSource);
   inTarget = idToLabel(inTarget);
 
   d3.selectAll(".results")
   .style("stroke-width", function(d) {return (d.properties.routeID == inRouteID ? (3 / zoom.scale()) : (9 / zoom.scale())) + "px"})
-//  .style("stroke-width", function(d) {return (d.properties.routeID == inRouteID ? 3 : 9 ) + "px"})
   .style("stroke", function(d) {return d.properties.routeID == inRouteID ? "black" : "white"})
 
   drawTimeline(d3.selectAll(".results").filter(function(d) {return d.properties.routeID == inRouteID}))
@@ -770,32 +876,26 @@ function populateRouteDialogue(inSource,inTarget,inRouteID) {
   var expCSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentexpense_c})
   var expDSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentexpense_d})
   var expWSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentexpense_w})
-  
-  routeModalContents.append("p").html("From " + inSource + " to " + inTarget)
-  routeModalContents.append("p").html("There are " + segmentNumber + " segments (including transfers) for a total length of " +Math.floor(lengthSum) + "km")
-  routeModalContents.append("p").html("The trip would last " + d3.round(durationSum,3) + " days")
-  routeModalContents.append("p").html("Transport of 1kg of grain would have cost:")
-  routeModalContents.append("p").html(" * " + d3.round(expDSum,3) + " by donkey")
-  routeModalContents.append("p").html(" * " + d3.round(expWSum,3) + " by wagon")
-  routeModalContents.append("p").html("" + d3.round(expCSum,3) + " per passenger")
+  routeModalContents.append("a").attr("id", "infoclosebutton").on("click", function () {d3.select('#routeResults').style('display','none')}).html("X")
+  routeModalContents.append("p").style("padding-right", "30px").html("The " + priorityType[tRoute.priority] + " journey from <span class='boldRed'>" + inSource + "</span> to <span class='boldRed'>" + inTarget + "</span> in <span class='bold'>" + monthNames[tRoute.month] + "</span> takes <span class='bold'>" + d3.round(durationSum,1) + " days</span>, covering <span class='bold'>"+Math.floor(lengthSum) + " kilometers</span>.")
+  routeModalContents.append("p").style("border-top", "1px lightgray solid").style("margin-top", "10px").html("Prices in <span class='italic'>denarii</span>, based on the use of a faster sail ship and a civilian river boat (where applicable), and on these road options:")
+  routeModalContents.append("p").html(" * Per kilogram of wheat (by donkey): <span class='bold'>" + d3.round(expDSum,2) + "</span>")
+  routeModalContents.append("p").html(" * Per kilogram of wheat (by wagon): <span class='bold'>" + d3.round(expWSum,2) + "</span>")
+  routeModalContents.append("p").html(" * Per passenger in a carriage: <span class='bold'>" + d3.round(expCSum,2) + "</span>")
   
   routeModalContents.transition().duration(750).style("padding", "0 20px").style("width", "400px")
+  zoomed();
 }
 
 function onOffSite(d, forceChange) {
   if (excludedSites.indexOf(d.id) > -1 && forceChange != "off") {
     d3.select("#sct" + d.id).style("opacity", 1)
-    excludedSites = excludedSites.filter(function (el) {return el != d.id && el.length == 5})
+    excludedSites = excludedSites.filter(function (el) {return el != d.id})
     d3.select("#incExcButton").html("Exclude Site")
   }
   else if (excludedSites.indexOf(d.id) == -1 && forceChange != "on") {
-    d3.select("#sct" + d.id).style("opacity", .5)
+    d3.select("#sct" + d.id).style("opacity", 0)
     excludedSites.push("" +d.id+ "")
-    //We also need to exclude the meta nodes that act as transfer points
-    excludedSites.push("1" +d.id+ "")
-    excludedSites.push("2" +d.id+ "")
-    excludedSites.push("3" +d.id+ "")
-    excludedSites.push("4" +d.id+ "")
     d3.select("#incExcButton").html("Include Site")
   }
 }
@@ -804,7 +904,7 @@ function clusterSitesUI() {
   d3.select("#clustermodal").style("display", "block").style("left", "200px").style("top", "200px");
   var modalContents = d3.select("#clustercontent").html('');
   modalContents.append("h2").html("Cluster Settings")
-  modalContents.append("p").html("Clustering will label the sites to indicate which cartogram center is closest according to the cartograms you've run. You can only cluster based on the same priority.")
+  modalContents.append("p").html("Clustering will color the sites to indicate which cartogram center is closest according to the cartograms you have run. You can only cluster based on the same priority.")
   
   if(cartogramsRun.length == 0) {
     modalContents.append("p").style("font-weight", 600).html("You have not run any cartograms. For clustering to be available, you need to run some cartograms by clicking on a site and clicking the Cartogram button.");
@@ -838,9 +938,9 @@ function clusterSitesUI() {
   .style("display", function(p,q) {return 0 == p.priority ? "block" : "none"})
   
   var clusterControls = modalContents.append("p");
-  clusterControls.append("button").on("click", clusterSites).html("Cluster")
+  clusterControls.append("button").on("click", clusterSites).html("Execute")
   clusterControls.append("span").html("Frontier Tolerance");
-  clusterControls.append("textarea").attr("id", "frontier").style("resize", "none").style("height", "20px").style("margin-left", "20px").style("width", "30px").html("1.0");
+  clusterControls.append("textarea").attr("id", "frontier").style("resize", "none").style("height", "20px").style("margin-left", "20px").style("width", "30px").html("0.0");
   clusterControls.append("img").attr("class", "helpicon").attr("src", "helpq.png").attr("data", "voronoi").on("click", function() {contextualHelp('frontier')})
 
   modalContents.append("p").append("button").on("click", exportCartoCSV).html("Export to CSV")
@@ -862,7 +962,7 @@ function updateClusterUIList () {
 function clusterSites() {
   activeCentersFull = activeCenter();
   activeCenters = d3.keys(activeCentersFull);
-  var frontierSetting = parseFloat(document.getElementById("frontier").value);
+  var frontierSetting =  1 - parseFloat(document.getElementById("frontier").value);
   if (activeCenters.length == 0) {
     return;
   }
@@ -907,7 +1007,11 @@ function clusterSites() {
   .style("fill", function(d) { return clusterOrdinal(d["nearestCluster"])})
   .style("stroke-width", "2px");
 
-  d3.select("#hullButton").style("display","block")
+  d3.select("#hullButton").style("display","block");
+  
+  for (x in activeCentersFull) {
+    siteLabel("site_g_"+activeCentersFull[x].centerID,true);
+  }
 }
 
 function drawBorders() {
@@ -973,6 +1077,7 @@ function restoreControlsMap() {
 }
 
 function tutorial(step) {
+  d3.select("#tutorialpopup").style("display", "block");
   var leftVal = "", rightVal = "", topVal = "", arrowVal = "", nextStep = "";
   switch(step) {
     case 1:
@@ -1096,7 +1201,7 @@ function tutorial(step) {
       newContent = "<p>Clicking this button will show you a table of the cartograms that you've calculated.</p>"
     break;
     case 15:
-      d3.select("tutorialpopup").style("display", "none");
+      d3.select("#tutorialpopup").style("display", "none");
       return;
     break;
     
@@ -1213,7 +1318,7 @@ function addCartoRow(cartoSettings) {
   var gridDiv = newCartoGrid.append("div").style("width", "170px");
   gridDiv.append("img").attr("src", imgUrl).style("width", "140px").style("height", "140px")
   .style("cursor", "pointer")
-  .attr("onclick", function() {return "runCarto(" + siteHash[cartoSettings.centerID].x + "," + siteHash[cartoSettings.centerID].y + "," + cartoSettings.centerID + "," + (cartogramsRun.length - 1) + ");"})
+  .attr("onclick", function() {return "cartogramOn("+ (cartogramsRun.length - 1) +"," + siteHash[cartoSettings.centerID].x + "," + siteHash[cartoSettings.centerID].y + ");runCarto(" + siteHash[cartoSettings.centerID].x + "," + siteHash[cartoSettings.centerID].y + "," + cartoSettings.centerID + "," + (cartogramsRun.length - 1) + ");"})
   newCartoGrid.append("span").style("position", "absolute").style("bottom", "10px")
   .html(siteHash[cartoSettings.centerID].label)
   
@@ -1260,7 +1365,7 @@ var projection2 = d3.geo.mercator()
     var path2 = d3.geo.path()
     .projection(projection2);
   
-  var land = topojson.feature(exposedroutes, exposedroutes.objects.new_routes)
+  var land = topojson.feature(exposedroutes, exposedroutes.objects.base_routes)
   var coast = topojson.feature(exposedCoast, exposedCoast.objects.coast)
   context = canvas.node().getContext("2d");
 
@@ -1279,7 +1384,7 @@ var projection2 = d3.geo.mercator()
   context.lineWidth = 1;
   context.beginPath(), path2.context(context)(coast), context.stroke();
   
-  var drawRoutes = exposedroutes.objects.new_routes.geometries;
+  var drawRoutes = exposedroutes.objects.base_routes.geometries;
   
   context.strokeStyle = 'darkred';
   context.lineWidth = 4;
@@ -1342,6 +1447,10 @@ function formatSettings(incSettings, targetSelection, imgUrl) {
   .on ("click", function () {
   var newPage1 = "<html><head><title>" + longLable + "</title></head><style>div: {width:100%;}</style><body><div><h1>" + longLable + "</div><div><img src='";
   var newPage2 = "' /></div><div><p>Scheidel, W. and Meeks, E. (May 2, 2012). ORBIS: The Stanford Geospatial Network Model of the Roman World. Retrieved " + da.toDateString() + ", from http://orbis.stanford.edu.</div></body></html>";
+
+  annotationDiv.append("button").html("delete");
+
+  annotationDiv.append("button").html("hide");
   
   var opened = window.open("", "_blank");
   window.focus();
@@ -1352,7 +1461,7 @@ function formatSettings(incSettings, targetSelection, imgUrl) {
   
   if (incSettings.centerID) {    
       annotationDiv.append("button").html("Redisplay")
-      .attr("onclick", function() {return "runCarto(" + siteHash[incSettings.centerID].x + "," + siteHash[incSettings.centerID].y + "," + incSettings.centerID + "," + (cartogramsRun.length - 1) + ");"})
+      .attr("onclick", function() {return "cartogramOn("+ (cartogramsRun.length - 1) +"," + siteHash[incSettings.centerID].x + "," + siteHash[incSettings.centerID].y + ");runCarto(" + siteHash[incSettings.centerID].x + "," + siteHash[incSettings.centerID].y + "," + incSettings.centerID + "," + (cartogramsRun.length - 1) + ");"})
   }
   else {
       annotationDiv.append("button").html("Redisplay")
@@ -1415,7 +1524,7 @@ function brushed() {
   }
 
   d3.select("#infopopup").style("display", "block");
-  d3.select("#infocontent").html("<p>You can draw a box to select multiple sites and remove or add them to the network.</p>");
+  d3.select("#infocontent").html("<p>You can draw a box to select multiple sites and remove them from or add them to the network.</p>");
   d3.selectAll(".multiSiteControl").style("display", "inline")
   
   var currentExtent = brush.extent();
@@ -1426,9 +1535,9 @@ function brushed() {
     return displayed != "none" && thisX >= currentExtent[0][0] && thisX <= currentExtent[1][0] && thisY >= currentExtent[0][1] && thisY <= currentExtent[1][1] ? this : null;
   })
   
-  d3.selectAll("g.site").select(".sitecirctop").style("fill", "#ad5041")
+  d3.selectAll("g.site").select(".sitecirctop").style("fill", "red")
   
-  filteredSelection.select(".sitecirctop").style("fill", "pink")
+  filteredSelection.select(".sitecirctop").style("fill", "red")
   
   d3.selectAll("g.changeButton")
   .attr("transform", function(d,i) {return "translate("+currentExtent[1][0]+","+(currentExtent[0][1] + (i *50)) +")"} )
@@ -1469,6 +1578,8 @@ function massSiteChange(onOff) {
 }
 
 function startBrushing() {
+    d3.select("#infopopup").style("display", "block");
+  d3.select("#infocontent").html("<p>You can draw a box to select multiple sites and remove them from or add them to the network.</p>");
   d3.select("#startBrushingButton").style("display", "none");
   d3.select("#stopBrushingButton").style("display", "inline");
   d3.select("g.zoom").style("display", "none");
@@ -1480,9 +1591,15 @@ function stopBrushing() {
   d3.select("#stopBrushingButton").style("display", "none");
   d3.select("g.zoom").style("display", "block");
   d3.select("g.brush").style("display", "none");
+  d3.select("#infopopup").style("display", "none");
+
 }
 
 function createVoronoi() {
+    if (voronoiRunning == true) {
+      clearVoronoi();
+      return;
+    }
   zoomed();
   var colorArray = [];
   clippingPolys = [];
@@ -1493,79 +1610,136 @@ function createVoronoi() {
   d3.selectAll(".sitecirctop")
   .filter(function() {return !cartogramRunning || d3.select(this).style("fill") != "#d3d3d3"})
   .each(function(el) {
-    forVoronoi.push(el);
+    forVoronoi.push(
+		    {
+//		    x: (d3.transform(el.cartoTranslate).translate[0] * zoom.scale()) + zoom.translate()[0],
+//		    y: (d3.transform(el.cartoTranslate).translate[1] * zoom.scale()) + zoom.translate()[1]
+		    x: d3.transform(el.cartoTranslate).translate[0],
+		    y: d3.transform(el.cartoTranslate).translate[1]
+		    });
     colorArray.push(d3.select(this).style("fill"));
-    var c = [(d3.transform(el.cartoTranslate).translate[0] * zoom.scale()) + zoom.translate()[0], (d3.transform(el.cartoTranslate).translate[1] * zoom.scale()) + zoom.translate()[1]];
-    clippingPolys.push([[c[0] - cPS,c[1]],[c[0] -cPS/2,c[1] + cPS],[c[0] + cPS/2,c[1] + cPS],[c[0] + cPS,c[1]],[c[0] + cPS/2,c[1] - cPS],[c[0] - cPS/2,c[1] - cPS]]);
     })
-  
-  var colorSet = d3.set(colorArray);
-  var colorKeys = colorSet.values();
   
   clearVoronoi();
   voronoiRunning = true;
   d3.selectAll("g.site").selectAll("circle").style("display", function(d) { return d.cost[d["nearestCluster"]] == 0 ? "block" : "none"})
-  voronoi = d3.geom.voronoi()
-  .x(function (el) {return (d3.transform(el.cartoTranslate).translate[0] * zoom.scale()) + zoom.translate()[0];})
-  .y(function (el) {return (d3.transform(el.cartoTranslate).translate[1] * zoom.scale()) + zoom.translate()[1];});
-    
-  vorPolys = voronoi(forVoronoi);
-  vorPolys.forEach(function(el,ar) {
-    vorPolys[ar] = d3.geom.polygon(vorPolys[ar]).clip(clippingPolys[ar])
-    })
-
-  d3.select("#voronoiG").remove();
-  d3.select("#mapSVG").insert("g", "#sitesG").attr("id", "voronoiG").selectAll("path.voronoi")
-  .data(vorPolys)
-  .enter()
-  .append("path")
-  .style("fill", function(d,i) {return colorArray[i]})
-  .attr("d", function (d) {return "M" + d.join("L") + "Z";})
-  .attr("class", "voronoi vorDelete")
-  .style("opacity", 0)
-  .style("display", "none");
-
-
-  d3.selectAll(".routes")
-  .transition().duration(2000).style("stroke", "black") 
-
-  contourPolys = clipVoronoi(colorKeys);
   
-  d3.select("#voronoiG").selectAll("g.contours").data(contourPolys).enter().append("g")
-  .attr("class", "voronoi")
-  .each(function(d) {d3.select(this).selectAll("path.contours").data(d.polys).enter().append("path")
-	.style("fill", d.color)
-	.style("stroke", d.color)
-	.style("stroke-width", "2px")
-	.attr("d", function(p) {return "M" + xyToArray(p).join("L") + "Z";})
-	})
-  	.style("opacity", 0)
-	  .on("mouseover", vorOver)
-  .on("mouseout", vorOut)
-  .transition()
-  .duration(1000)
-  .style("opacity", 1)
-  .transition()
-  .duration(1000)
-  .style("opacity", .70);
+  vorXExtent = d3.extent(forVoronoi, function(d) {return d.x})
+  vorYExtent = d3.extent(forVoronoi, function(d) {return d.y})
 
-  d3.selectAll(".vorDelete").remove();
+  //create constraint points
+  if (!cartogramRunning) {
+    var vxScale = d3.scale.linear().range(vorXExtent).domain([0,1]);
+    var vyScale = d3.scale.linear().range(vorYExtent).domain([0,1]);
+  for (var x=0.05;x<.7;x+=.05) {
+    forVoronoi.push({x: vxScale(x), y: vyScale(Math.max(.75, x + .4))})
+    colorArray.push("none");
+  }
+  for (var y=0.75;y<1;y+=.05) {
+    forVoronoi.push({x: vxScale(.9), y: vyScale(y)})
+    colorArray.push("none");    
+  }
 
-  function vorOver(d) {
+  for (var x=0.35;x<1;x+=.05) {
+    forVoronoi.push({x: vxScale(x), y: vyScale(Math.max(.15, x + -.7))})
+    colorArray.push("none");    
+  }
+
+    forVoronoi.push({x: vxScale(.3), y: vyScale(.05)})
+    colorArray.push("none");    
+
+    forVoronoi.push({x: vxScale(.98), y: vyScale(.35)})
+    colorArray.push("none");    
+
+    forVoronoi.push({x: vxScale(.97), y: vyScale(.7)})
+    colorArray.push("none");    
+
+    forVoronoi.push({x: vxScale(.98), y: vyScale(.55)})
+    colorArray.push("none");    
+    
+    forVoronoi.push({x: vxScale(.98), y: vyScale(.35)})
+    colorArray.push("none");
+
+    forVoronoi.push({x: vxScale(.025), y: vyScale(.05)})
+    colorArray.push("none");
+
+    forVoronoi.push({x: vxScale(.05), y: vyScale(.3)})
+    colorArray.push("none");
+
+    forVoronoi.push({x: vxScale(.55), y: vyScale(.25)})
+    colorArray.push("none");
+
+    forVoronoi.push({x: vxScale(.6), y: vyScale(.275)})
+    colorArray.push("none");
+
+    forVoronoi.push({x: vxScale(.65), y: vyScale(.275)})
+    colorArray.push("none");
+
+    forVoronoi.push({x: vxScale(.7), y: vyScale(.3)})
+    colorArray.push("none");
+
+    forVoronoi.push({x: vxScale(.75), y: vyScale(.275)})
+    colorArray.push("none");
+
+  }
+    
+  var colorSet = d3.set(colorArray);
+  var colorKeys = colorSet.values();
+  
+  var vM = Math.abs(vorXExtent[0] - vorYExtent[0]) * .025;
+  
+  voronoi = d3.geom.voronoi()
+  .clipExtent([[vorXExtent[0] - vM,vorYExtent[0] - vM],[vorXExtent[1] + vM,vorYExtent[1] + vM]])
+  .x(function (el) {return el.x})
+  .y(function (el) {return el.y});
+  
+  topology = voronoi.topology(forVoronoi);
+
+    d3.select("#voronoiG").remove();
+    for (x in colorKeys) {
+      if (colorKeys[x] != "none") {
+  d3.select("#mapSVG").insert("g", "#sitesG").attr("id", "voronoiG").attr("class", "voronoi " + colorKeys[x])
+//        .datum(topojson.merge(topoCollection, topoCollection.objects.voronoi.geometries))
+        .datum(topojson.merge(topology, topology.objects.voronoi.geometries.filter(function(d,i) { return colorArray[i] == colorKeys[x]})))
+	.on("mouseover", vorOver)
+        .on("mouseout", vorOut)
+	.style("opacity", .7)
+	.call(zoom)
+	.selectAll("path.voronoi")
+	.data(function(d) {return d.coordinates})
+      .enter().append("path")
+      .attr("class", "voronoi")
+        .style("fill", colorKeys[x])
+        .style("stroke", d3.hsl(colorKeys[x]).darker())
+//        .style("stroke-width", "1px")
+	.attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
+	.style("stroke-width", function(d) {return scaled(1)})
+        .attr("d", function (d) {return "M" + d.join("L") + "Z";})
+//	.attr("d", transformCoordinates)
+      }
+    }
+
+  function vorOver(d,i) {
+    var cClass = d3.select(this).attr("class")
     d3.selectAll("g.Voronoi")
-      .filter(function (p) {return p.color == d.color}).style("opacity", 1);
+      .filter(function () {return cClass == d3.select(this).attr("class")}).style("opacity", .95);
       var siteNumber = d3.selectAll(".sitecirctop")
-      .filter(function (p) {return d3.select(this).style("fill") == d.color}).style("opacity", 1).size();
+      .filter(function (p,q) {return "voronoi " + d3.select(this).style("fill") == cClass}).size();
     
   d3.select("#infopopup").style("display", "block");
   d3.select("#infocontent").html("<p>" + siteNumber + " sites in this region</p>");
   }
 
   function vorOut(d) {
-  d3.selectAll("g.Voronoi").style("opacity", .7);
+  d3.selectAll("g.voronoi").style("opacity", .7);
   d3.select("#infopopup").style("display", "none");
   
   }
+  
+  d3.selectAll(".routes")
+  .transition().duration(2000).style("stroke", "black") 
+
+
   
   function xyToArray(incArray) {
   var newArray = []    
@@ -1577,11 +1751,11 @@ function createVoronoi() {
 
 
   if (!cartogramRunning) {
-    d3.select("#voronoiG").selectAll("path.coastlines").data(topojson.feature(exposedCoast, exposedCoast.objects.coast).features)
+    d3.select("#mapSVG").insert("g", "#sitesG").attr("id", "voronoiG").selectAll("path.coastlines").data(topojson.feature(exposedCoast, exposedCoast.objects.coast).features)
     .enter()
     .append("path")
     .attr("d", path)
-    .attr("class", "voronoi")
+    .attr("class", "coastlines voronoi")
     .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
     .style("fill", "none")
     .style("stroke", "black")
@@ -1592,6 +1766,20 @@ function createVoronoi() {
   
 }
 
+    function transformCoordinates (d) {
+      var pathD = "M";
+      for (x in d[0]) {
+	pathD += ((d[0][x][0] * zoom.scale()) + zoom.translate()[0]);
+	pathD += ",";
+	pathD += ((d[0][x][1] * zoom.scale()) + zoom.translate()[1]);
+	if (x < (d[0].length - 1)) {
+	  pathD += "L";
+	}
+      }
+      pathD += "Z";
+      return pathD;
+    }
+
 function clearVoronoi() {
   voronoiRunning = false;
   colorByType(true);
@@ -1599,48 +1787,6 @@ function clearVoronoi() {
   d3.selectAll("path.voronoi").remove();
   d3.selectAll("g.voronoi").remove();
   d3.selectAll("clipPath").remove();
-}
-
-function clipVoronoi(colorValues) {
-
-  var clipType = ClipperLib.ClipType.ctUnion;
-  var fillType = 1;
-  
-  var contourPolys = [];
-  
-  colorValues.forEach(function (colorVal) {
-  cpr = new ClipperLib.Clipper();
-  var vorArray = [];
-  var solutionPath = [[]]
-  d3.selectAll("path.voronoi").filter(function (el) {return d3.select(this).style("fill") == colorVal})
-  .each(function (el) {
-  var vorSegs = d3.select(this).node().pathSegList;
-  var x = 0;
-  var newPathArray = [];
-  while (x < vorSegs.numberOfItems) {
-    var newPathSegment = {X: parseInt(vorSegs.getItem(x).x), Y: parseInt(vorSegs.getItem(x).y)};
-    if (parseInt(vorSegs.getItem(x).x)) {
-      newPathArray.push(newPathSegment);
-    }
-    x++;
-  }
-  
-  vorArray.push(newPathArray);
-  })
-
-//  paths = ClipperLib.Clipper.SimplifyPolygons(vorArray, ClipperLib.PolyFillType.pftNonZero);
-//  paths = ClipperLib.Clipper.CleanPolygons(paths, 5);
-//  paths = ClipperLib.JS.Clean(paths, 5);
-
-    cpr.AddPaths(vorArray, ClipperLib.PolyType.ptSubject, true);
-    cpr.AddPaths([vorArray[0]], ClipperLib.PolyType.ptClip, true);
-    
-    var succeeded = cpr.Execute(clipType, solutionPath, fillType, fillType);
-    contourPolys.push({color: colorVal, polys: solutionPath});
-  })
-  
-  return contourPolys;
-  
 }
 
 function drawTimeline(selectedRoutes) {
@@ -1667,12 +1813,7 @@ function drawTimeline(selectedRoutes) {
   var roughXScale = d3.scale.linear().domain([xMin,xMax]).range([(canvMargin * 3), canvWidth - (canvMargin * 3)]);
   var roughDistortedXScale = d3.scale.linear().domain([xMin,xMax]).range([(canvMargin * 3), canvWidth - (canvMargin * 3)]).nice();
   var roughYScale = d3.scale.linear().domain([yMax,yMin]).range([canvMargin, canvHeight - canvMargin]);
-/*
-  if (yMax - yMin > xMax - xMin) {
-  roughXScale = d3.scale.linear().range([canvMargin, canvHeight - canvMargin]);
-  roughYScale = d3.scale.linear().range([(canvMargin * 4), canvWidth - (canvMargin * 4)]);
-  }
-*/
+
   var roughLineConstructor = d3.svg.line()
   .x(function(d) {return roughXScale(d[0])})
   .y(function(d) {return roughYScale(d[1])});
@@ -1703,12 +1844,17 @@ function drawTimeline(selectedRoutes) {
   d3.select("#timelineSVG")
   .selectAll("g.timelineSites").data(timelineSites).enter().append("g")
   .attr("class", "timelineSites")
-  .on("mouseover", function() {d3.select(this).select("text").style("display", "block")})
-  .on("mouseout", function() {d3.select(this).select("text").style("display", "none")});
+  .on("mouseover", function(d) {this.parentNode.appendChild(this);d3.select("#site_g_" + d.id).select(".sitecirc").style("stroke", "red").style("stroke-width", scaled(50));d3.select(this).selectAll("text").style("display", "block")})
+  .on("mouseout", function(d) {d3.select("#site_g_" + d.id).select(".sitecirc").style("stroke", "none");d3.select(this).selectAll("text").style("display", "none")});
   
   d3.selectAll("g.timelineSites").append("circle").style("fill", "#ad5041").style("stroke", "black").style("stroke-width", "1px").attr("r", 4);
+
+  d3.selectAll("g.timelineSites")
+  .append("text").style("pointer-events", "none").attr("y", -5).style("display", "none").style("text-anchor", "middle").style("fill", "white").style("stroke", "white").style("stroke-width", "3px").style("opacity",.75).style("font-weight", 900).text(function(d) {return d.label})
   
-  d3.selectAll("g.timelineSites").append("text").style("pointer-events", "none").style("y", -5).style("display", "none").style("text-anchor", "middle").style("font-weight", 900).text(function(d) {return d.label})
+  d3.selectAll("g.timelineSites")
+  .append("text").style("pointer-events", "none").attr("y", -5).style("display", "none").style("text-anchor", "middle").style("font-weight", 600).text(function(d) {return d.label})
+  
   timelineBy("perspective");
   d3.select("#tlbPerspective").on("click", function() {timelineBy("perspective");})
   d3.select("#tlbDuration").on("click", function() {timelineBy("duration");})
@@ -1761,17 +1907,17 @@ function drawTimeline(selectedRoutes) {
     if (distortionType == "expensed") {
       roughDistortedXScale.domain([0,totalCostD]);
       propType = "segmentexpense_d";
-      d3.select("#tlXLabel").text("Denaari/kg") 
+      d3.select("#tlXLabel").text("Denarii/kg") 
     }
     if (distortionType == "expensew") {
       roughDistortedXScale.domain([0,totalCostW]);
       propType = "segmentexpense_w";
-      d3.select("#tlXLabel").text("Denaari/kg") 
+      d3.select("#tlXLabel").text("Denarii/kg") 
     }
     if (distortionType == "expensec") {
       roughDistortedXScale.domain([0,totalCostC]);
       propType = "segmentexpense_c";
-      d3.select("#tlXLabel").text("Denaari/passenger") 
+      d3.select("#tlXLabel").text("Denarii/passenger") 
     }
     updateAxis(roughDistortedXScale);
 
@@ -1837,7 +1983,7 @@ function resultsOver(d) {
 
 function resultsOut(d) {
   d3.selectAll(".timelineRoutes").style("stroke-width", "4px");
-  d3.selectAll(".results").filter(function(p) {return p.properties.segment_id == d.properties.segment_id}).style("stroke", "black")
+  d3.selectAll(".results").filter(function(p) {return p.properties.segment_id == d.properties.segment_id}).style("stroke", function(d) {return d.properties.fixedColor})
 }
 
 function simplifyLines(selectedLines) {
@@ -1850,6 +1996,7 @@ function simplifyLines(selectedLines) {
 	var segPointProjected = projection.invert([segPoint.x,segPoint.y])
 	simplifiedObject.coordinates.push([segPointProjected[0],segPointProjected[1]]);	
 	}
+	simplifiedObject.cartocoords = simplifiedObject.coordinates;
 	simpleGeom.push(simplifiedObject);
 	})
       return simpleGeom;
@@ -1860,17 +2007,23 @@ function switchControls(switchType) {
   if (switchType == "cartogram") {
     d3.select("#cartoCalculateButton").style("display", "inline");
     d3.select("#targetSelectButton").style("display", "none");
-    d3.select("#directionPicker").style("display", "inline");
+    d3.select("#targetSelectLabel").style("display", "none");
+    d3.select("#sourceSelectLabel").html("Center");
+    d3.select("#directionDiv").style("display", "block");
   }
   else if (switchType == "Minard") {
     d3.select("#sankeyCalculateButton").style("display", "inline");
     d3.select("#targetSelectButton").style("display", "none");
-    d3.select("#directionPicker").style("display", "inline");    
+    d3.select("#targetSelectLabel").style("display", "none");
+    d3.select("#sourceSelectLabel").html("Center");
+    d3.select("#directionDiv").style("display", "block");    
   }
   else {
     d3.select("#routeCalculateButton").style("display", "inline");
+    d3.select("#targetSelectLabel").style("display", "inline");
     d3.select("#targetSelectButton").style("display", "inline")
-    d3.select("#directionPicker").style("display", "none");
+    d3.select("#sourceSelectLabel").html("From");
+    d3.select("#directionDiv").style("display", "none");
   }
 }
 
@@ -1975,32 +2128,65 @@ function activeCenter() {
 
 function mapOff(opacSetting) {
   opacSetting = opacSetting || 0;
-  if (d3.select("#rasterG").style("opacity") == 1) {
-    d3.select("#rasterG").style("opacity", opacSetting);
+  if (d3.select("#rasterG").style("opacity") == opacSetting) {
+    d3.select("#rasterG").style("opacity", 1);
+    d3.select("#terrainOnButton").style("background", "#D6E0EB")
   }
   else {
-    d3.select("#rasterG").style("opacity", 1);    
+    d3.select("#rasterG").style("opacity", opacSetting);    
+    d3.select("#terrainOnButton").style("background", "#767676")
   }
+}
+
+function sitesOff() {
+    if (d3.select("g.site").style("display") == "none") {
+    d3.selectAll("g.site").style("display", "block")
+    d3.select("#sitesOnButton").style("background", "#D6E0EB")
+  }
+  else {
+    d3.selectAll("g.site").style("display", "none")
+    d3.select("#sitesOnButton").style("background", "#767676")
+  }
+
+}
+
+function networkOff() {
+    if (d3.select("path.routes").style("display") == "none") {
+    d3.selectAll("path.routes").style("display", "block")
+    d3.select("#networkOnButton").style("background", "#D6E0EB")
+  }
+  else {
+    d3.selectAll("path.routes").style("display", "none")
+    d3.select("#networkOnButton").style("background", "#767676")
+  }
+  
 }
 
 function temporaryLabels() {
   if (d3.selectAll(".hoverlabel").empty()) {
     d3.selectAll("g.site").each(function(d,i) {siteOver(d,i)});
+    d3.select("#labelsOnButton").style("background", "#D6E0EB")
   }
   else {
     d3.selectAll(".hoverlabel").remove();
+    d3.select("#labelsOnButton").style("background", "#767676")
   }
 }
 
 function zoomManual(zoomDirection) {
 
-
   if (zoomDirection == "in") {
+    if (zoom.scale() >= 131072) {
+      return;
+    }
 var newZoom = zoom.scale() * 1.5;
 var newX = ((zoom.translate()[0] - (width / 2)) * 1.5) + width / 2;
 var newY = ((zoom.translate()[1] - (height / 2)) * 1.5) + height / 2;
   }
   else {
+    if (zoom.scale() <= 4096) {
+      return;
+    }
 var newZoom = zoom.scale() * .75;
 var newX = ((zoom.translate()[0] - (width / 2)) * .75) + width / 2;
 var newY = ((zoom.translate()[1] - (height / 2)) * .75) + height / 2;    
@@ -2015,9 +2201,13 @@ function geoSankey(centerID) {
   newSettings["centerID"] = centerID;
   sankeyHash = {};
 
+  d3.select(".calculateDisable").style("display", "block");
 //    minardQuery = "sankey_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded+"&d="+newSettings.direction;
 
+      _gaq.push(['_trackEvent', 'interaction', "minard", centerID]);
+
   d3.csv(minardQuery, function(error,cartoData) {
+    d3.select(".calculateDisable").style("display", "none");
     for (x in cartoData) {
       sankeyHash[cartoData[x].source + "-" + cartoData[x].target] = cartoData[x].freq;
       sankeyHash[cartoData[x].target + "-" + cartoData[x].source] = cartoData[x].freq;
@@ -2049,7 +2239,12 @@ function geoSankey(centerID) {
   })
   d3.selectAll("circle").style("display", "none")
   mapOff(.2);
-  d3.select("#sankeyButton").style("display", "block")
+  d3.select("#sankeyButton").style("display", "inline")
+  
+  d3.selectAll(".sitecirc").classed("sourcecirc", false);
+  d3.selectAll(".sitecirc").classed("targetcirc", false);
+  d3.selectAll(".slabel").classed("underlined", false);
+  siteLabel("site_g_"+centerID,true);
 }
 
 function sankeyOff() {
@@ -2068,36 +2263,54 @@ function contextualHelp(helpString) {
   var helpText = "No help text found for " +helpString;
   switch(helpString) {
     case "transfer":
-      helpText = "<p>The transfer cost adds the set number of days every time there is a switch between modes of transport. Switches between modes occur in changes from road to river, river to sea, and so on.</p>"
+      helpText = "<p>Accounts for the time cost involved in transfers between different types of transportation by adding the selected number of days to any change from or to travel by road, river and sea.</p>"
       break;
     case "advanced":
       helpText = "<p>Define your own custom costs for each mode.</p><p>This isn't currently operational.</p>"
       break;      
     case "voronoi":
-      helpText = "<p>Create regions based on the current site categorization. This allows you to see regions of similar cost or cluster.</p>"
+      helpText = "<p>Once a cartogram has been generated, this function displays cost contours that show which sites share a specific range of transportation costs from or to the selected start or end point. The relevant costs are reported in the legend that appears in the lower right hand corner. This perspective helps capture the structural properties and logistical constraints of the of the Roman imperial system as a whole.</p>"
       break;      
     case "cluster":
-      helpText = "<p>Indicate which sites are closer to centers. This is only useful after you've run two or more cartograms of the same priority.</p>"
+      helpText = "<p>This function shows which sites are closest (in terms of connectivity cost) to the center points of two or more cartograms. Proceed in the following steps: 1. Generate two or more cartograms. 2. Use the “Cluster” button to open a pop-up window that allows you to specify priority and frontier tolerance (explained in the window). 3. Use the “Execute” button in the window. All sites assume the color of the closest center point, as explained in a second pop-up window. 4. The “Regions” button allows you to display each cluster as a colored region. By moving your cursor into a given cluster you can see the number of sites in that cluster. 5. Using the “Georectify” button matches each cluster to a conventional map. 6. It is always possible to add further cartograms or unselect previous ones (in the first pop-up window). You may also generate Minard diagrams that will be superimposed on the existing clusters.</p>"
       break;
     case "exportsvg":
-      helpText = "<p>Save your map as SVG</p>"
+      helpText = "<p>You can download the map in vector format which will allow you to edit it in Inkscape or Adobe Illustrator. The downloaded map will not include terrain.</p>"
       break;
     case "route":
-      helpText = "<p>A route is the most efficient path based on your priority and restriction from the source site to the target site.</p>"
+      helpText = "<p>A route is the most efficient path from the starting point to the destination based on your selections.</p>"
       break;
     case "cartogram":
-      helpText = "<p>A cartogram calculates the cost from the source site to all target sites based on the direction and priority and restrictions you have set.</p>"
+      helpText = "<p>The network function calculates the cost between one site (center) and all other sites based on your selections.</p>"
       break;
     case "minard":
-      helpText = "<p>A Minard Diagram calculates all the most efficient routes to or from the selected site and aggregates those routes so that you can see the most used paths.</p>"
+      helpText = "<p>A Minard Diagram calculates all the most efficient routes from or to the selected site and aggregates them to show the most used paths.</p>"
       break;
-    case "":
-      helpText = "<p>Between the domains controlled by your selected centers lies a contested region we call the 'frontier'. A setting of 1.0 will have no frontier--lower the tolerance to increase the size of the frontier.</p>"
+    case "frontier":
+      helpText = "<p>In the default setting for clustering (0.0), sites are assigned to a given cluster strictly based on the lowest connectivity cost to or from a given center. You can relax this principle by i dentifying sites that are up to   x percent costlier to reach from an alternative center. These overlapping layers create a 'frontier.' For example, a tolerance setting of 0.2 identifie s all sites whose connectivity cost from multiple centers differs by no more than 20 percent. The higher the tolerance setting, the more sites fall into this intermediate 'frontier' zone between centers.</p>"
       break;      
     case "shipmodel":
-      helpText = "<p>ORBIS sea routes were run with two models, a fast ship model and a slow ship model. They have slightly different routes and travel on coastal and overseas routes using the slow ship model takes more time.</p><p>The Daylight option restricts sailing to coastal routes and the fast ship model. Sea routes take longer with the Daylight mode because sailing only takes place during daylight hours, which is more restrictive during the winter and less restrictive during the summer."
+      helpText = "<p>Sea routes are calculated with two models for faster and slower ships and differ in terms of routing and speed. The Daylight option restricts sea travel to coastal routes during daylight hours, using the faster ship model. This results in greater travel times, which vary by season depending on the length of day and night."
       break;      
-    case "":
+    case "georectify":
+      helpText = "<p>Returns the sites in a cartogram to their correct geographical position. The coloring of the sites continues to reflect their cost distance from or to the selected starting or end point (for a single cartogram), or indicates which cluster they belong to (if the clustering function has been used). Once the sites have been georectified, the “Regions” button allows you to display cost contours or clusters on a conventional (undistorted) map.</p>"
+      break;
+    case "selectsites":
+      helpText = "<p>This function allows you to limit your analysis to specific regions by drawing boxes on the map. However, if you wish to select or exclude a particular site, move your cursor to its location on the map and enter commands in the pop-up window.</p>"
+      break;
+    case "highres":
+      helpText = "<p>Includes additional regional sites and routes that are secondary to the baseline network. While the known densities of sites and roads vary greatly among different parts of the Roman world, the baseline network is limited to the most important sites and routes in order to ensure consistent levels of coverage.</p>"
+      break;
+        case "browse":
+      helpText = "<p>Use this function to view your previous simulations.</p>"
+      break;      
+        case "networkcolor":
+      helpText = "<p>This function colors the network routes according to cost and mode. For “Expense” and “Speed,” blue indicates the lowest cost and red the highest cost: blue routes are the fastest or cheapest, red ones the slowest or most expensive. “Mode” is the default setting that distinguishes between different types of routes: road, river, and coastal and open sea.</p>"
+      break;
+      case "cartogramon":
+      helpText = "<p>The cost cartogram function reconfigures the network by expressing the cost (in distance, time or expense) between the center and all other sites as distances: each unit of distance in the display corresponds to a unit of connectivity cost. For example, a site that is shown as being three times as far away from the center as another site is three times as costly (in terms of distance, time or expense) to reach from the center.</p>"
+      break;      
+      case "":
       helpText = "<p></p>"
       break;      
   }
@@ -2112,6 +2325,9 @@ function createEssay(essayName) {
   var essayPath="building.html";
     switch(essayName)
   {
+    case 'home':
+    essayPath="assets/intro.html"
+    break;
     case 'intro':
     essayPath="assets/introducing.html"
     break;
@@ -2146,11 +2362,13 @@ function createEssay(essayName) {
 
   
 d3.text(essayPath, function(data) {
-  d3.select("#essayContent").html(data);
+  
+  d3.select("#essayContent").html(data).node().scrollTop = 0;
 })
 }
 
 function closeEssay() {
+  d3.select("#stickynote").transition().duration(2000).style("opacity", 1).transition().delay(3000).style("opacity", 1).transition().duration(2000).style("opacity", 0);
   d3.select('#essayBox').style('display','none');
   d3.select('#essayContent').style('display','none');
 }
@@ -2167,7 +2385,7 @@ function changePriority(chPriority) {
 	 {l: 'Rapid Military March (60km/day)',v: 'rapidmarch',p:"f"},
 	 {l: 'Donkey',v: 'donkey',p:"c"},
 	 {l: 'Wagon', v:'wagon',p:"c"},
-	 {l: 'Passenger', v:'carriage',p:"c"}]
+	 {l: 'Passenger in Carriage', v:'carriage',p:"c"}]
 
   d3.selectAll("option.vehicleType").remove();
   d3.select("#vehicleSelectButton").selectAll("option")
@@ -2199,17 +2417,20 @@ function resizeMap() {
 
 }
 
-function zoomLocation(p) {
-      return [ (p[0] - zoom.translate()[0]) / zoom.scale(), (p[1] - zoom.translate()[1]) / zoom.scale() ];
-    }
-    
-function zoomPoint(l) {
-      return [ l[0] * zoom.scale() + zoom.translate()[0], l[1] * zoom.scale() + zoom.translate()[1] ];
-    }
-    
-function zoomTranslateTo(p, l) {
-      l = zoomPoint(l);
-      var x = zoom.translate()[0] + p[0] - l[0];
-      var y = zoom.translate()[0] + p[1] - l[1];
-      return [x,y]
-    }
+
+///Analytics
+var _gaq = _gaq || [];
+
+_gaq.push(['_setAccount', 'UA-30365192-1']);
+
+_gaq.push(['_trackPageview']);
+
+(function() {
+
+var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+
+ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+
+var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+
+})();  

@@ -2,35 +2,34 @@
 <head>
   <title>ORBIS v2 (.1)</title>
   <link type="text/css" rel="stylesheet" href="orbis.css" />
+  <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
   <meta charset="utf-8" />
 </head>
 
 <body>
-  <div id="essayBox" onclick="closeEssay()">
-      <span id="infoclosebutton" style="top:5px;right:5px;z-index:1;" onclick="closeEssay()" >X</span>
-  </div>
+  <div id="essayBox">
     <div id="essayContent">
-      
     </div>
+    <span id="infoclosebutton" style="display:block; background: white; top:55px;right:75px;z-index:99;" onclick="closeEssay()" >X</span>
+    <div style="width:100%;height:100%;" onclick="closeEssay()">
+    </div>
+  </div>
   <div id="topbar"><div id="title">ORBIS 2.0 (beta)</div>
-    <div class="navtab" data="intro">Introducing ORBIS</div>
-    <div class="navtab" data="understand">Understanding ORBIS</div>
-    <div class="navtab" data="build">Building ORBIS</div>
-    <div class="navtab" data="tutorial">Using ORBIS</div>
+    <div class="navtab" data="home">Introduction</div>
+    <div class="navtab" data="understand">Understanding</div>
+    <div class="navtab" data="build">Building</div>
+    <div class="navtab" data="tutorial">Using</div>
     <div class="navtab" data="gallery">Map Gallery</div>
     <div class="navtab" data="scholarship">Research</div>
-    <div class="navtab" data="media">ORBIS in the Media</div>
+    <div class="navtab" data="media">Media</div>
     <div class="navtab" data="credits">Credits</div>
     <div class="navtab" data="news">What's New</div>
     <div id="authors"><a href="http://www.stanford.edu/~scheidel/">Walter Scheidel</a> <a href="https://dhs.stanford.edu">Elijah Meeks</a></div></div>
-  <div id="restoreButton" style="display: none;position: fixed; top:50px; left:30px;"><button style="cursor:pointer;" onclick="restoreControlsMap();">Controls</button></div>
-  <div class="controlsDiv" style="position: fixed; bottom:10px; right:10px; background: white;">
-    <a href="https://github.com/emeeks/orbis_v2"><img style="position: fixed; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
-  </div>
+  <div id="restoreButton" style="display: none;position: fixed; top:40px; right:10px;"><button style="cursor:pointer;" onclick="restoreControlsMap();">Controls</button></div>
 
   <div id="vizcontainer">
     <div id="legendmodal" class="popup">
-      <span id="infoclosebutton" onclick="d3.select('#legendmodal').style('display','none')" >X</span>
+      <span id="infoclosebutton" onclick="d3.select('#legendmodal').style('display','none');d3.select('#legendDisplayButton').style('display','block');" >X</span>
       <svg id="legendSVG"></svg>
     </div>
     <div id="routemodal" class="modal"></div>
@@ -42,12 +41,11 @@
     <div id="infopopup" class="popup">
       <span id="infoclosebutton" onclick="d3.select('#infopopup').style('display','none')" >X</span>
       <div id="infocontent">
-    <p>Welcome to ORBIS v2 (beta)</p>
-    <p>Please send any bugs or feature requests or other feedback to <a href="mailto:emeeks@stanford.edu">Elijah Meeks (emeeks@stanford.edu)</a></p>
     </div>
-      <button class="multiSiteControl" onclick="massSiteChange('off')">Exclude these sites</button><button class="multiSiteControl" onclick="massSiteChange('on')">Include these sites</button>
-      <button class="multiSiteControl" onclick="massSiteChange('intersect')">Only These Sites</button><button class="multiSiteControl" onclick="massSiteChange('exclude')">All Sites But These</button>
-      <button class="multiSiteControl" onclick="massSiteChange('all')">All Sites</button><button class="multiSiteControl" onclick="massSiteChange('none')">No Sites</button>
+      <button class="multiSiteControl" onclick="massSiteChange('all')">All Sites</button>
+      <button class="multiSiteControl" onclick="massSiteChange('intersect')">Limit to these Sites</button>
+      <button class="multiSiteControl" onclick="massSiteChange('on')">Add these sites</button>
+      <button class="multiSiteControl" onclick="massSiteChange('off')">Exclude these sites</button>
       </div>
     <div id="tutorialpopup" class="tutorial">
       <span id="infoclosebutton" onclick="d3.select('#tutorialpopup').style('display','none')" >X</span>
@@ -56,64 +54,93 @@
         <p>Here's some tutorial content.</p>
       </div>
     </div>
+    <div id="stickynote" class="tutorial" style="opacity:0;pointer-events:none;min-height:1px;height:28px; width: 200px;right:135px;top:460px;">
+      <div id="stickyarrow" style="width:20px;height:20px;transform: rotate(45deg);-ms-transform: rotate(45deg);-webkit-transform: rotate(45deg);background:white;  border-right: solid 2px lightgray;border-top: solid 2px lightgray;position:absolute;right:-12px;top:3px;"></div>
+      <div id="stickycontent" >
+        <div style="padding:3 0 0;">Click here for a tutorial</div>
+      </div>
+    </div>
 
   </div>
-    <div class="controlsDiv" style="position: fixed; top: 10%; right: 0px; height:100px; width: 200px; background:#F8F8F8;">
-    <div class="buttonContainer" style="width: 180px;">
-      <p>
+    <div class="controlsDiv" style="padding: 0 10px 10px;top: 10%; right: 10px; width: 200px;">
+    <div class="buttonContainer">
+      <span class="fieldTitle">Map Controls</span>
+      <fieldset style="margin-top:-8px;">
       <button onclick="zoomManual('in');">Zoom in</button>
       <button onclick="zoomManual('out');">Zoom out</button>
       <button onclick="fullscreenMap();">Full Screen</button>
-      </p>
-      <p>
-      <button id="startBrushingButton" onclick="startBrushing();">Select Sites</button>
+      </fieldset>
+      <span class="fieldTitle">Site Controls</span>
+      <fieldset style="margin-top:-8px;">
+      <button id="startBrushingButton" onclick="startBrushing();">Select Sites</button><img data="selectsites" class="helpicon" src="helpq.png" />
       <button id="stopBrushingButton" style="display:none;" onclick="stopBrushing();">Stop Selecting</button>
-      </p>
-      <p>
+      <button id="resetMapButton" style="color:red;" onclick="">Reset Map</button>
+      </fieldset>
+      <span class="fieldTitle">Map Functions</span>
+      <fieldset style="margin-top:-8px;">
       <button onclick="createVoronoi();">Regions</button><img data="voronoi" class="helpicon" src="helpq.png" />
-      </p>
-      <p>
       <button onclick="clusterSitesUI()">Cluster</button><img data="cluster" class="helpicon" src="helpq.png" />
-      </p>
-      <p>
-      <button onclick="exportSVG();">Export SVG</button><img data="exportsvg" class="helpicon" src="helpq.png" />
-      </p>
-      <p>
-      <button onclick="">Tutorial</button>
-      <button onclick="mapOff();">Terrain</button>
-      <button onclick="temporaryLabels();">Labels</button>
-      </p>
-      <p>
-      <button class="controlButton" onclick="cartogramOff()">Cartogram Off</button>
-      <button id="sankeyButton" style="display:none;" onclick="sankeyOff();">Minard Off</button>
-      </p>
+      <div style="display:none;" id="cartoOffButton"><button class="controlButton" onclick="cartogramOff()">Georectify</button><img data="georectify" class="helpicon" src="helpq.png" /></div>
+      <div style="display:none;" id="cartoOnButton"><button class="controlButton">Cost Cartogram</button><img data="cartogramon" class="helpicon" src="helpq.png" /></div>
+      <button id="sankeyButton" style="display:none;" onclick="sankeyOff();">Flow Off</button>
+      </fieldset>
+      <span class="fieldTitle">Display</span>
+      <fieldset style="margin-top:-8px;">
+        <div style="width:50%;float:left;">
+      <button id="terrainOnButton" onclick="mapOff();">Terrain</button></div>
+        <div style="width:50%;float:left;">
+      <button id="labelsOnButton" style="background: #767676;" onclick="temporaryLabels();">Names</button></div>
+        <div style="width:50%;float:left;">
+      <button id="sitesOnButton" onclick="sitesOff();">Sites</button></div>
+        <div style="width:50%;float:left;">
+      <button id="networkOnButton" onclick="networkOff();">Network</button></div>
+        <div style="width:50%;float:left;display:none;" id="legendDisplayButton">
+      <button onclick="d3.select(this.parentNode).style('display', 'none');d3.select('#legendmodal').style('display', 'block');">Legend</button>
+        </div>
+      </fieldset>
+      <span class="fieldTitle">Network Color</span>
+      <fieldset style="margin-top:-8px;">
+      <button id="eButton" class="routeLabelButton" onclick="colorBy('e')">Expense</button><img data="networkcolor" class="helpicon" src="helpq.png" />
+      <button id="sButton" class="routeLabelButton" onclick="colorBy('s')">Speed</button> <button id="tButton" class="routeLabelButton active" onclick="colorByType()">Mode</button>
+      </fieldset>
       <button style="display:none;" onclick="testCommunities(exposedsites,exposedroutes,d3.selectAll('g.site'))">Network Communities</button>
-      <p><a id="svgDownload">Download SVG</a></p>
-      <p>You can also browse routes and cartograms run on ORBIS:</p>
-      <button onclick="d3.select('#controlbar').style('display', 'none');d3.selectAll('#resultsTable').style('display', 'block');d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.routeRow').style('display','block');d3.selectAll('tr.routeRow').style('display','table-row');">Routes</button>
-      <button onclick="d3.select('#controlbar').style('display', 'none');d3.selectAll('#resultsTable').style('display', 'block');d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.cartoRow').style('display','block');d3.selectAll('tr.cartoRow').style('display','table-row');">Cartograms</button>
-      <p>Color the network by priority to get a sense of how the network changes based on priority.</p>
-      <button id="eButton" class="routeLabelButton controlButton" onclick="colorBy('e')">Expense</button> <button id="sButton" class="routeLabelButton controlButton" onclick="colorBy('s')">Speed</button> <button id="tButton" class="routeLabelButton controlButton active" onclick="colorByType()">Type</button>
+      <span class="fieldTitle">Tools</span>
+      <fieldset style="margin-top:-8px;">
+      <button onclick="d3.select('#controlbar').style('display', 'none');d3.selectAll('#resultsTable').style('display', 'block');d3.selectAll('.resultsRow').style('display', 'block');d3.selectAll('tr.resultsRow').style('display','table-row');">History</button><img data="browse" class="helpicon" src="helpq.png" />
+      <button onclick="tutorial(1);">Tutorial</button>
+      <button onclick="exportSVG();">Export SVG</button><img data="exportsvg" class="helpicon" src="helpq.png" />
+      <a id="svgDownload">Download SVG</a>
+      </fieldset>
     </div>
     </div>
 
-  <div class="controlsDiv" id="controlbar" style="position: fixed; top: 10%; left: 0px; height:80%; width: 230px; background:#F0F0F0;">
-    <a class="tab" onmouseover="contextualHelp('route')" onmouseout="d3.select('#infopopup').style('display','none')" onclick="switchControls('route');" style="left:5px;">Route</a>
-    <a class="tab backtab" onmouseover="contextualHelp('cartogram')" onmouseout="d3.select('#infopopup').style('display','none')" onclick="switchControls('cartogram');" style="left:59px;">Cartogram</a>
-    <a class="tab backtab" onmouseover="contextualHelp('minard')" onmouseout="d3.select('#infopopup').style('display','none')" onclick="switchControls('Minard');" style="left:147px;">Minard</a>
-    <div class="buttonContainer" style="width:140px">
-      <select id="sourceSelectButton" class="controlButton">
-        </select> <select id="targetSelectButton" class="controlButton">
+  <div class="controlsDiv" id="controlbar" style="top: 10%; left: 10px; height:auto; width: 290px; padding:0px 10px 20px;">
+    <a class="tab" id="routTab" onmouseover="contextualHelp('route')" onmouseout="d3.select('#infopopup').style('display','none')" onclick="switchControls('route');" style="left:5px;">Route</a>
+    <a class="tab backtab" id="cartTab" onmouseover="contextualHelp('cartogram')" onmouseout="d3.select('#infopopup').style('display','none')" onclick="switchControls('cartogram');" style="left:62px;">Network</a>
+    <a class="tab backtab" id="minTab" onmouseover="contextualHelp('minard')" onmouseout="d3.select('#infopopup').style('display','none')" onclick="switchControls('Minard');" style="left:138px;">Flow</a>
+    <div class="buttonContainer" style="width:200px">
+      <div id="sourceSelectParent" style="width:100%;">
+        <span id="sourceSelectLabel">From</span>:
+      </div>
+        <div style="width:100%;" id="targetSelectLabel">To: <select id="targetSelectButton" class="controlButton">
         </select>
-            <fieldset id="directionPicker" style="display: none;">
+        </div>
+            <div id="directionDiv" style="margin-top:10px;display:none;width:100%;"><span class="fieldTitle">Direction</span>
+            <fieldset style="margin-top:-8px;" id="directionPicker">
+      <div style="width:100%;">
       <input type="radio" name="direction" value="0" id="from" checked>
       <label for="from" class="direction-picker-label">From</label>
+</div>
+      <div style="width:100%;">
       <input type="radio" name="direction" value="1" id="to">
       <label for="to" class="direction-picker-label">To</label>
+</div>
             </fieldset>
+            </div>
     </div>
     <div class="buttonContainer">
-      <fieldset id="monthPicker">
+      <span class="fieldTitle">Month of Departure</span>
+      <fieldset style="margin-top:-8px;" id="monthPicker">
       <input type="radio" name="month" value="1" id="jan">
       <label for="jan" class="month-picker-label">Jan</label>
       <input type="radio" name="month" value="2" id="feb">
@@ -126,11 +153,11 @@
       <label for="may" class="month-picker-label">May</label>
       <input type="radio" name="month" value="6" id="jun">
       <label for="jun" class="month-picker-label">Jun</label>
-      <input type="radio" name="month" value="7" id="jul">
+      <input type="radio" name="month" value="7" id="jul" checked>
       <label for="jul" class="month-picker-label">Jul</label>
       <input type="radio" name="month" value="8" id="aug">
       <label for="aug" class="month-picker-label">Aug</label>
-      <input type="radio" name="month" value="9" id="sep" checked="">
+      <input type="radio" name="month" value="9" id="sep">
       <label for="sep" class="month-picker-label">Sep</label>
       <input type="radio" name="month" value="10" id="oct">
       <label for="oct" class="month-picker-label">Oct</label>
@@ -142,56 +169,76 @@
     </div>
 
     <div class="buttonContainer">
+            <span class="fieldTitle">Priority</span>
+      <fieldset style="margin-top:-8px;padding-bottom: 0;">
       <form id="priorityForm"><input onclick="changePriority('f')" type="radio" value="0" name="priority" checked>Fastest</input><input onclick="changePriority('c')" type="radio" value="1" name="priority">Cheapest</input><input  onclick="changePriority('f')" type="radio" value="2" name="priority">Shortest</input></form>
+      </fieldset>
     </div>
 
-    <div class="buttonContainer">
-  Modes</div>
     <div class="buttonContainer" style="width:210px">
+            <span class="fieldTitle">Network Modes</span>
+      <fieldset style="margin-top:-8px;padding-bottom: 0;">
       <form id="modeForm" onclick="updateBGRoutes();">
         <div class="checkboxDiv">
         <input type="checkbox" value="road" name="mode" checked>Road</input>
         </div>
         <div class="checkboxDiv">
-        <input id="riverModeCheck" type="checkbox" value="upstream,downstream" name="mode" checked>River</input>
+        <input id="coastModeCheck" type="checkbox" value="coastal" name="mode" checked>Coastal Sea</input>
         </div>
         <div class="checkboxDiv">
-        <input id="coastModeCheck" type="checkbox" value="coastal" name="mode" checked>Coastal</input>
+        <input id="riverModeCheck" type="checkbox" value="upstream,downstream" name="mode" checked>River</input>
         </div>
         <div class="checkboxDiv">
         <input id="overseasModeCheck" type="checkbox" value="overseas" name="mode" checked>Open Sea</input>
         </div>
         <div class="checkboxDiv">
         <input type="checkbox" value="hires" name="mode">High Resolution</input>
+        <img data="highres" class="helpicon" src="helpq.png" />
         </div>
       </form>
+      <div style="width:100%">
+      Transfer cost: <input type="text" style="width:30px;" id="transferCost" class="controlButton" onclick="colorByType()" /> days<img data="transfer" class="helpicon" src="helpq.png" />
+      </div>
+      </fieldset>
 
     </div>
     <div class="buttonContainer">
-Aquatic Options</div>
-
-    <div class="buttonContainer">
-      <input type="radio" name="riverSwitch" onclick="d3.select('#riverModeCheck').node().value = 'upstream,downstream';" checked>Civilian</input>
+      <span class="fieldTitle">Aquatic Options</span>
+      <fieldset style="margin-top:-8px;padding-bottom: 0;">
+        <div style="width:100%">
+      <span style="padding:0px 5px;">River:</span>
+        <input type="radio" name="riverSwitch" onclick="d3.select('#riverModeCheck').node().value = 'upstream,downstream';" checked>Civilian</input>
       <input type="radio" name="riverSwitch" onclick="d3.select('#riverModeCheck').node().value = 'fastup,fastdown';">Military</input>
-    </div>
-    <div class="buttonContainer">
+      </div>
+        <div style="width:100%">
+        <span style="padding:0px 5px;">Sea:</span>
       <input type="radio" name="seaSwitch" onclick="d3.select('#overseasModeCheck').node().value = 'overseas';d3.select('#coastModeCheck').node().value = 'coastal';" checked>Fast</input>
       <input type="radio" name="seaSwitch" onclick="d3.select('#overseasModeCheck').node().value = 'slowsea';d3.select('#coastModeCheck').node().value = 'slowcoast';">Slow</input>
       <input type="radio" name="seaSwitch" onclick="d3.select('#overseasModeCheck').node().value = '';d3.select('#coastModeCheck').node().value = 'dayfast';">Daylight</input>
       <img data="shipmodel" class="helpicon" src="helpq.png" />
+        </div>
     </div>
+      </fieldset>
 
-    <div class="buttonContainer" style="width:190px">
-      Vehicle Type <select id="vehicleSelectButton" style="width:170px;" class="controlButton" onclick="colorBy('e')">
-        </select> Transfer cost: <input type="text" style="width:30px;" id="transferCost" class="controlButton" onclick="colorByType()" /> days<img data="transfer" class="helpicon" src="helpq.png" />
-        <button style="margin-left:50px;">Advanced</button><img data="advanced" class="helpicon" src="helpq.png" /> 
+    <div class="buttonContainer">
+      <span class="fieldTitle">Road Options</span>
+      <fieldset style="margin-top:-8px;padding-bottom: 0;">
+        <div style="width:100%">
+      <select id="vehicleSelectButton" style="width:170px;" class="controlButton" onclick="colorBy('e')">
+        </select>
+        </div>
+        <div style="width:100%">
+        <button style="margin-left:170px;color:red;">Advanced</button><img data="advanced" class="helpicon" src="helpq.png" />
+        </div>
+      </fieldset>
     </div>
 
     <div style="background:lightred" class="buttonContainer">
-      <button class="controlButton calculateButton" id="routeCalculateButton" onclick="calculateRoute()">Calculate Route</button>
-      <button class="controlButton calculateButton" id="cartoCalculateButton" style="display:none;" onclick="calculateCarto()">Calculate Cartogram</button>
-      <button class="controlButton calculateButton" id="sankeyCalculateButton" style="display:none;" onclick="calculateSankey()">Minard Diagram</button>
-          <div id="routeResults" class="modal"></div>
+      <div class="calculateDisable"><div id="calculateDisableText">Calculating...</div></div>
+      <button class="controlButton calculateButton" style="background: #4d8ffd;color:white;" id="routeCalculateButton" onclick="calculateRoute()">Calculate Route</button>
+      <button class="controlButton calculateButton" id="cartoCalculateButton" style="background: #4d8ffd;color:white;display:none;" onclick="calculateCarto()">Calculate Network</button>
+      <button class="controlButton calculateButton" id="sankeyCalculateButton" style="background: #4d8ffd;color:white;display:none;" onclick="calculateSankey()">Calculate Flow</button>
+          <div id="routeResults"></div>
     </div>
   </div>
       <div id="resultsTable" style="display:none;background:white;border:1px black solid;position:absolute;left:0px;top:10%;height:80%;width:540px;overflow: hidden;z-index: 99;">
@@ -205,10 +252,13 @@ Aquatic Options</div>
         <button onclick="d3.select('#controlbar').style('display', 'block');d3.selectAll('#resultsTable').style('display', 'none');">CLOSE</button>
       </div>
       <div id="recentList" class="resultsContainer" style="overflow: auto;height:520px;border-top:1px lightgray solid;">
+        <span class="emptyHistory">There are no results yet because you haven't run any routes or network diagrams.</span>
       </div>
       <div id="recentGrid" class="resultsContainer" style="display:none;overflow: auto;height:520px;border-top:1px lightgray solid;">
+        <span class="emptyHistory">There are no results yet because you haven't run any routes or network diagrams.</span>
       </div>
       <div id="recentTable" class="resultsContainer" style="display:none;overflow: auto;height:520px;border-top:1px lightgray solid;">
+        <span class="emptyHistory">There are no results yet because you haven't run any routes or network diagrams.</span>
         <table style="width:540px;">
           <caption>Results</caption>
           <thead>
@@ -256,10 +306,8 @@ Published by <a href="http://library.stanford.edu">Stanford University Libraries
 </script> <script src="topojson.js" type="text/javascript">
 </script> <script src="colorbrewer.js" type="text/javascript">
 </script> <script src="legend.js" type="text/javascript">
-</script> <script src="clipper.js" type="text/javascript">
 </script> <script src="orbis.js" type="text/javascript">
 </script> <script src="community.js" type="text/javascript">
-</script> <script src="sankey.js" type="text/javascript">
 </script>
   </footer>
 </body>

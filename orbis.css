@@ -1,6 +1,15 @@
+p {
+  padding: 5px;
+  margin: 0;
+  line-height: 1.5em;
+}
+
+h4 {
+  margin: 0;
+}
 body {
   margin: 0;
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: 'Lato', sans-serif;
 
 }
 
@@ -8,7 +17,7 @@ path {
   fill: none;
   stroke: red;
   stroke-linejoin: round;
-  stroke-width: 1.5px;
+  stroke-linecap: round;
 }
 
 button {
@@ -27,6 +36,18 @@ button.active {
 button.disabled {
   background: #9494B8;
 }
+
+.controlsDiv {
+  background: white;
+  position: fixed;
+  -webkit-box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.underlined {
+  text-decoration: underline;
+}
+
 #controlbar {
   height:100px;
 }
@@ -55,6 +76,18 @@ button.disabled {
   z-index: 1;
 }
 
+.boldRed {
+  color: darkred;
+  font-weight: 900;
+}
+
+.bold {
+  font-weight: 900;
+}
+
+.italic {
+  font-style: italic;
+}
 
 .modal {
   position:absolute;
@@ -76,25 +109,29 @@ button.disabled {
   box-shadow: 0 0 1px rgba(0, 0, 0, 0.2);
   background: white;
   border: solid 2px lightgray;
-  padding: 0 20px;  
+  padding: 0 20px;
 }
 
 #tutorialcontent {
   padding: 20px 0;
 }
 
+#tutorialpopup {
+  display: none;
+}
 .popup {
   position:absolute;
-  top:10px;
-  left:20%;
-  right:20%;
+  top:50px;
+  left:250px;
+  right:250px;
   z-index: 3;
-  -webkit-box-shadow: 0 0 1px rgba(0, 0, 0, 0.2);
-  box-shadow: 0 0 1px rgba(0, 0, 0, 0.2);
-  border-radius: 20px;
-  background: white;
-  border: solid 2px lightgray;
-  padding: 0 20px;
+  -webkit-box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+  background: #faffd3;
+  border: solid 0px lightgray;
+  padding: 0 40px 0 20px;
+  display: none;
+  min-height: 50px;
 }
 
 #legendmodal {
@@ -116,28 +153,31 @@ button.disabled {
   position: absolute;
   top:5px;
   right:10px;
-  border:black 1px solid;
-  background:white;
+  color: #8c1515;
+  font-weight: 900;
+  font-size: 2em;
+  background:none;
   padding:1px 5px;
   cursor:pointer;
 }
 
 #infoclosebutton:hover {
-  background: cyan;
+  color: #460A0A;
 }
 
 #routeResults {
   width: 400px;
-  bottom: 0;
-  left: 210px;
+  bottom: 50px;
+  left: 300px;
   overflow:hidden;
   border: 5px solid #F0F0F0;
-  
+  position: absolute;
+  background: white;
+  display: none;
 }
 
 #routeResults > p {
-  width: 360px;
-  padding: 0 20px;
+  padding: 5px 0;
 }
 
 #sitemodal {
@@ -185,7 +225,6 @@ background-image: linear-gradient(to bottom, #302e42, #29253b);
   padding: 0 7px;
   font-size: 12px;
   font-weight: 200;
-  color: #8d8ba6;
   text-transform: uppercase;
   display: inline-block;
   line-height: 25px;
@@ -211,11 +250,15 @@ input:checked + .month-picker-label:before {
 opacity: 1;
 }
 
+.fieldTitle {
+  margin-left: 10px;
+  padding:0px 5px;
+  background: white;
+}
 
 .buttonContainer {
-  width: 210px;
-  padding:10px;
-  background: #F0F0F0;
+  width: 100%;
+  margin-top:10px;
   float: left;
   position: relative;
 }
@@ -254,7 +297,7 @@ opacity: 1;
 .tab {
   position: absolute;
   z-index: 1;
-  top: -29px;
+  top: -30px;
   background: white;
   padding: 5px;
   border: solid gray 1px;
@@ -263,7 +306,6 @@ opacity: 1;
 
 .backtab {
   border-bottom: solid gray 1px;
-  background: lightgray;
   padding-top: 4px;
 }
 
@@ -281,6 +323,7 @@ border: 1px #959595 solid;
 border-bottom: none;
 position: absolute;
 bottom: 0px;
+right:0;
 padding: 6px;
 }
 
@@ -297,12 +340,14 @@ padding: 6px;
 
 #priorityForm
 {
-  font-size: 12px;
+  font-size: 16px;
+  margin-bottom: 5px;
 }
 .checkboxDiv
 {
   display: inline-block;
 }
+
 
 #topbar {
   position:fixed;
@@ -311,6 +356,7 @@ padding: 6px;
   height:40px;
   background: #8c1515;
   z-index: 1;
+  letter-spacing: 1px;
 }
 
 #authors {
@@ -336,18 +382,17 @@ padding: 6px;
   left: 0;
   padding: 0 20px;
   font-size: 30px;
-  color: E7D19A;
+  color: white;
 }
 
 .navtab {
   margin-top: 11px;
   padding: 5px 5px 2px;
-  border: 1px solid gray;
   height: 20px;
-  font-size: 12px;
-  color: gray;
+  font-size: 13px;
+  color: white;
   float: left;
-  background: white;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -367,6 +412,8 @@ padding: 6px;
   display: none;
 }
 #essayContent {
+  -webkit-box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
   position:absolute;
   left:50px;
   right: 50px;
@@ -380,12 +427,38 @@ padding: 6px;
   display: none;
 }
 
+.controlButton {
+  width: 125px;
+}
+
+.calculateButton {
+  font-size: 18px;
+  font-weight: 900;
+  width: 250px;
+  margin: 0 auto;
+}
+
+.calculateDisable {
+  background: rgba(255,255,255,.85);
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: none;
+}
+#calculateDisableText {
+  margin:5px 80px;
+  font-weight: 900;
+}
+.routeLabelButton {
+  font-size:10px;
+}
+
 /* Imported */
 .rightcol {
-	padding: 75 0 0 0;	float: right;	width: 300px;
+	padding: 75 0 0 0;	float: left;	width: 300px;
 	height: 100%;	margin-top:25px;}
         
-        .leftcol {width:620px;}
+        .leftcol {width:620px;float: left;}
 
 
 div .righttoc {
@@ -394,8 +467,8 @@ div .righttoc {
 	float: right; font-size: .9em; padding: 4px;}}
 .rightcol a {text-decoration:none; color: #336699;}
 div .rightpull {
-    margin-top: 10px; color:#333; font-family:Verdana, Geneva, sans-serif;
-	border:thin #993333 dotted; background-color: #eeeee0;
+    margin-top: 10px; color:#333; font-family: 'Lato', sans-serif;
+	background-color: #eeeee0;
 	float: right; padding: 18px; font-size:small;}
 div .rightpic {
     width: 280px; margin: 10px; color:#333;
@@ -413,8 +486,56 @@ div .inlinepic {
 div .inlinepic_plain {
     width: 95%; margin: 10px;	color:#333;
 	font-size: .8em; text-align:center;}
-.caption { font-family:Verdana, Geneva, sans-serif; font-size:.9em; text-align:center; color:#333; padding-left:2px;}
+.caption { font-family: 'Lato', sans-serif; font-size:.9em; text-align:center; color:#333; padding-left:2px;}
 
 #intro p { margin-bottom: 2px;}
 
+#lcol {	width: 490px; float:left; font-size: 14px;}
+#pic { float:left; clear:right; margin: 9px 8px 0 6px;}
+.blurb {width:216px; padding:6px; background-color:#eeeee0; /*border: thin solid #993333;*/
+	margin-top: 8px ;margin-bottom: 8px; float:left;
+	font-family: 'Lato', sans-serif; font-size: .9em;
+	border-radius: 5px; min-height: 64px;}
+.blurb a { text-decoration:none; }
+.blurb a:hover { text-decoration:underline;}
+.blurb h4 {background-color:lightyellow; padding-top:0; color:#336699;}
  
+.firstchar { float: left; color: #990000; font-size: 50px; line-height: 40px; padding-top: 4px; padding-right: 4px; padding-left: 3px; font-family: 'Lato', sans-serif; }
+ 
+.fauxbutton { cursor: pointer;text-decoration: none; font-size:15px; background-color: #434A44; color:#C6FFFF; margin-right:3px;}
+.fauxbutton:hover  {color:#D6DFDF; text-decoration:none;}
+
+.navpanelblurb {
+  font-size:12px;
+}
+
+
+/* Applying section */
+#applyPapersTOC {
+  width: 300px;
+  float:left;
+}
+h3.applying {color:#434A44}
+.articlebody {	font-family: 'Lato', sans-serif;
+	font-style: normal;
+	font-size: 1.2em;
+	padding: 6px; }
+.footnotes ol {	list-style-type:decimal; margin-left: 8px; padding-left: 1.3em;}
+.applyTOCTitle { color:#434A44; font-weight:bold; }
+.applyTOCauthor {}
+#applyingDiv { width:620px;float:left;}
+#applyingDiv  ul {list-style: square; margin: 4px 20px; line-height:1.3em;}
+#applyingDiv  li {margin-bottom:2px;}
+#applyingDiv  h2 { margin-bottom:4px;}
+.applyingPanel {width: 580px; padding:8px; background-color:#fff; border: thin dotted #993333; 
+	clear:both; margin-top: 8px; margin-bottom: 8px;}
+.applyingPanel p { padding-left: 0;}
+/* d3 stuff */
+.dclabel { font-family: 'Lato', sans-serif; font-weight:bold; letter-spacing:1.5px; 
+	color: #333; text-shadow: 1px 1px 2px grey, 0 0 1em white, 0 0 0.2em white;}
+.gratext { font-family: 'Lato', sans-serif; font-weight:bold; letter-spacing:2px;}
+.titletext { font-family: 'Lato', sans-serif; font-size:1.7em;  letter-spacing:2px; color:#900;}
+
+.colhead {font-family: 'Lato', sans-serif; font-weight:bold; color:#d6ddd3; 
+	background-color: #434A44; padding:2px 0 2px 4px; line-height: 18px;}
+.colhead a, .colhead visited  {color:#C6FFFF; text-decoration:none;	}

@@ -526,3 +526,7 @@ images/using_01.png
 images/using_02.png
 
 images/dc_explanation.png
+
+*.php
+
+*.png
