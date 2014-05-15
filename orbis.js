@@ -5,7 +5,8 @@
   excludedSites = [99999];
   //This is an array to hold the carto settings for reference by the clustering function
   cartogramsRun = [];
-  routesRun = [];
+  flowsRun = [];
+  routesRun = {};
   refreshSet = 0;
   currentRoute = 0;
   lastCartoRan = 0;
@@ -19,8 +20,20 @@
   directionHash = {0: "From", 1: "To"};
   sankeyHash = {};
   routeOpacity = false;
+  orbisColorScale = colorbrewer.YlOrRd[5];
+  psEffects = false;
+  displaySites = true;
+  sankeyRunning = false;
+  
+  zoomDisplayRange = d3.scale.linear().domain([500,30000]).range([99,59]).clamp(true);
+  siteSize = d3.scale.linear().domain([100,90,60]).range([36,26,20]).clamp(true);
   
   betweennessScale = d3.scale.linear().domain([0,0,0]).range([0,0,0])
+  
+  cheapestScale = colorbrewer.Greens[5];
+  fastestScale = colorbrewer.Reds[5];
+  shortestScale = colorbrewer.Purples[5];
+  priorityColor = [fastestScale[4], cheapestScale[4], shortestScale[4]];
 
 //var typeHash = {road: "brown", overseas: "green", dayfast: "#5CE68A", dayslow: "#5CE68A", slowcoast: "#5CE68A", coastal: "#5CE68A", upstream: "blue", downstream: "blue", fastup: "blue", fastdown: "blue", ferry: "#5CE68A"}
 var typeHash = {road: "#997A00", overseas: "#006699", dayfast: "#5CE68A", dayslow: "#5CE68A", slowcoast: "#5CE68A", coastal: "#5CE68A", upstream: "#5C85FF", downstream: "#5C85FF", fastup: "#99E6FF", fastdown: "#99E6FF", ferry: "#5CE68A"}
@@ -184,7 +197,7 @@ d3.csv("sites.csv", function(error, sites) {
   .attr("transform", function(d) {return "translate(" + projection([d.x,d.y]) + ")scale(" + projection.scale() + ")"})
   .style("cursor", "pointer")
   .on("click", siteClick)
-  .on("mouseover", siteOver)
+  .on("mouseover", function(d,i) {siteOver(d,i,this)})
   .on("mouseout", siteOut)
   .each(function(d) {
     d.cartoTranslate = "translate(" + projection([d.x,d.y]) + ")scale(" + projection.scale() + ")";
@@ -293,7 +306,12 @@ function startUp() {
 //  document.getElementById("sourceSelectInput").value = "Roma";
   document.getElementById("targetSelectButton").value = 50129;
   
-  createEssay("home")
+  $("#sourceSelectButton").chosen();
+  $("#targetSelectButton").chosen();
+  createEssay("home");
+  [50024,50017,50107,50429,50235,50129,50327,50359,50379,50124,50549,50213]
+  var r = [50024,50017,50107,50429,50235,50129,50327,50359,50379,50124,50549,50213][Math.floor(Math.random()*12)];
+  cartogram(r);
 
 }
 
@@ -313,12 +331,26 @@ function zoomComplete() {
 function zoomed() {
     var downloadButton = d3.select("#svgDownload").style("display", "none");
 
+  d3.selectAll("g.site").attr("display", function(d) {return zoomDisplayRange(zoom.scale()) < d.rank ? "block" : "none"});
+  if (displaySites == false) {
+    d3.selectAll("g.site").selectAll("circle").style("display", "none")
+  }
+  else {
+    d3.selectAll("g.site").selectAll("circle").style("display", "block")
+  }
+  if (cartogramRunning) {
+    d3.selectAll("g.site").filter(function(d) {return d.cost[lastCartoRan] == -1}).style("display", "none")
+  }
+
   if (voronoiRunning == true) {
     d3.selectAll("path.voronoi")
     .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
-    .style("stroke-width", function(d) {return scaled(1)});
+    .style("stroke-width", scaled(1));
+    d3.selectAll(".voronoi-cell")
+    .style("stroke-width", scaled(1))
+    .style("stroke-dasharray", scaled(5) +","+ scaled(5));
   }
-
+  
   d3.selectAll(".results").style("display", "none")
   d3.selectAll(".modal").style("display", "none");
 
@@ -352,28 +384,36 @@ d3.selectAll("path.hull")
 
 d3.select("#sitesG")
     .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
-  
+
 d3.selectAll(".sitecirc")
-  .attr("r", function(d) {return scaled(24)})
+  .attr("r", function(d) {return scaled(siteSize(d.rank))})
   .style("stroke-width", scaled(4))
 
 d3.selectAll(".sitecirctop")
-  .attr("r", function(d) {return scaled(20)})
+  .attr("r", function(d) {return scaled(siteSize(d.rank) - 4)})
   ;
 
   d3.selectAll(".sourcecirc")
-  .attr("r", function(d) {return scaled(34)})
+  .attr("r", function(d) {return scaled(siteSize(d.rank) + 10)})
   .style("stroke-width", scaled(8))
 
 d3.selectAll(".targetcirc")
-  .attr("r", function(d) {return scaled(28)})
+  .attr("r", function(d) {return scaled(siteSize(d.rank) + 4)})
   .style("stroke-width", scaled(14))
 
 d3.selectAll(".slabel")
   .attr("x", scaled(2))
   .attr("y", scaled(-60))
   .style("font-size", function() {return d3.select(this).classed("underlined") ? scaled(150) : scaled(100)})
-  .style("stroke-width", scaled(25));
+  .style("stroke-width", scaled(25))
+  .each(function() {d3.select(this.parentNode).style("display", "block")});
+
+d3.selectAll(".pslabel")
+  .attr("x", scaled(2))
+  .attr("y", scaled(60))
+  .style("font-size", scaled(80))
+  .style("stroke-width", scaled(25))
+  .each(function() {d3.select(this.parentNode).style("display", "block")});
   
     d3.selectAll(".routes")
       .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
@@ -382,10 +422,14 @@ d3.selectAll(".slabel")
 }
 
 function colorBy(attribute) {
+  var oSc = fastestScale;
+  if (attribute == "e") {
+    oSc = cheapestScale;
+  }
   resetButtons("routeLabelButton");
   d3.select("#"+attribute+"Button").classed("active", true);
   var max = d3.max(exposedroutes.objects.base_routes.geometries, function(d) {return d.properties[attribute]})
-  colorRamp=d3.scale.quantize().domain([max,0]).range(colorbrewer.Spectral[8]);
+  colorRamp=d3.scale.quantize().domain([max,0]).range(oSc);
   d3.selectAll(".routes")
   .transition().duration(500).style("stroke", function(d) {return colorRamp(d.properties[attribute])})
 }
@@ -426,13 +470,12 @@ function siteClick(d,i) {
   costList.selectAll("li").data(d.cost).enter().append("li").html(function(p) {return p});
 }
 
-function siteOver(d,i) {
-  this.parentNode.appendChild(this);
+function siteOver(d,i,ext) {
+    ext.parentNode.appendChild(ext);
   
 
-//  d3.select("#site_g_"+d.id+"_label").transition().duration(500).style("stroke-width", scaled(75))
-  if (!d3.select(this).select("text").empty()) {
-  d3.select(this).select(".sitecirctop").transition().duration(500).attr("r", scaled(2)).transition().duration(500).attr("r", scaled(20))
+  if (!d3.select(ext).select("text").empty()) {
+  d3.select(ext).select(".sitecirctop").transition().duration(500).attr("r", scaled(2)).transition().duration(500).attr("r", function(d) {return scaled(siteSize(d.rank) - 4)})
     return;
   }
   d3.select("#site_g_"+d.id).append('text').attr("class","hoverlabel").text(d.label)
@@ -468,8 +511,6 @@ function siteLabel(siteID, underlined) {
     removeSiteLabel(siteID);
     xC = " underlined";
     xF = 150;
-    console.log(siteID)
-    console.log(d3.select("#"+siteID))
     d3.select("#"+siteID).node().parentNode.appendChild(d3.select("#"+siteID).node());
     d3.select("#"+siteID).select(".sitecirc").classed("sourcecirc", "true");
 
@@ -547,8 +588,7 @@ function cartogram(centerID) {
   newSettings["centerID"] = centerID;
   cartogramsRun.push(newSettings)
     d3.select(".calculateDisable").style("display", "block");
-//  cartoQuery = "new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded+"&d="+newSettings.direction;
-console.log(cartoQuery);
+  cartoQuery = "new_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tr="+newSettings.riverTransfer+"&ts="+newSettings.seaTransfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded+"&d="+newSettings.direction;
   d3.selectAll("span.emptyHistory").remove();
   _gaq.push(['_trackEvent', 'interaction', "cartogram", centerID]);
   
@@ -600,8 +640,19 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   max = d3.max(exposedsites, function(el) {return el["cost"][cartoPosition]});
   mid = max / 2;
 
+  var oSc = orbisColorScale;
+  switch (parseInt(cartogramsRun[cartoPosition].priority)) {
+    case 0:
+      oSc = fastestScale;
+      break;
+    case 1:
+      oSc = cheapestScale;
+      break;
+    case 2:
+      oSc = shortestScale;
+  }
 //  var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
-  cartoRamp=d3.scale.quantize().domain([0,max]).range(colorbrewer.Spectral[8]);
+  cartoRamp=d3.scale.quantize().domain([0,max]).range(oSc);
   var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
 
   d3.selectAll("g.legend").remove();
@@ -609,7 +660,7 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
   d3.select('#legendmodal').style('display','block').classed("horizontal", false);
   d3.select('#legendDisplayButton').style('display','none');
   d3.select("#legendSVG").append("g").attr("transform", "translate(0,30)").attr("class", "legend").call(cartoLegend);
-
+  d3.select("#legendTitle").html("Distance " + directionHash[cartogramsRun[cartoPosition].direction] + " " + siteHash[centerID].label)
   d3.select("g.legend").selectAll("g")
   .on("mouseover", function (d) {d3.selectAll("g.Voronoi")
       .filter(function (p) {return p.color == d.color}).style("opacity", 1);
@@ -627,6 +678,7 @@ d3.selectAll(".routes").filter(function(el) {return el.properties.source == unde
 
   d3.select("#cartoOnButton").on("click", function() {cartogramOn(cartoPosition,centerX,centerY)}).style("display", "block");
   zoomed();
+
 }
 
 function cartogramOn(cartoPosition, centerX,centerY) {
@@ -660,10 +712,8 @@ function cartogramOn(cartoPosition, centerX,centerY) {
     return (ratio * ydiff * .0001) + projectedCoordsCen[1];
   }
 
-    d3.selectAll("g.site").style("display", function(d) {return d.cost[cartoPosition] == -1 ? "none" : "block"})
   d3.selectAll("path.links").style("display", function(d) {return d.properties.source.cost[cartoPosition] == -1 || d.properties.target.cost[cartoPosition] == -1 ? "none" : "block"})
 
-  
   svg.selectAll("g.site")
   .each(function(d) {
     d.cartoTranslate = "translate("+ (findx(d["cost"][cartoPosition],d.x,d.y,centerX,centerY))  + "," + (findy(d["cost"][cartoPosition],d.x,d.y,centerX,centerY)) + ")scale(.159)";
@@ -690,12 +740,16 @@ function cartogramOn(cartoPosition, centerX,centerY) {
   .attr("transform", function(d) {return d.cartoTranslate;});
   
   d3.selectAll(".links").transition().duration(3000).attr("d", function(d) {return (d.cartoD ? d.cartoD : "")})
-  d3.select("#cartoOffButton").style("display", "inline")
+  d3.select("#cartoOffButton").style("display", "inline");
+  
+    if (psEffects == true) {
+      drawBorders();
+  }
+zoomed();
 }
 
 function cartogramOff() {
   clearVoronoi();
-  d3.selectAll("g.legendRing").remove();
   d3.select("#sitemodal").style("display", "none");
   cartogramRunning = false;
   d3.select("#rasterG").transition().duration(3000).style("opacity", 1);
@@ -703,7 +757,6 @@ function cartogramOff() {
   d3.selectAll("g.site").filter(function(d) {return d.cost[lastCartoRan] == -1 ? this : null}).select(".sitecirctop").style("fill", "lightgray")
 
   d3.selectAll("g.site")
-  .style("display", "block")
   .transition()
   .duration(3000)
   .attr("transform", function(d) {return "translate(" + projection([d.x,d.y]) + ")scale(" + projection.scale() + ")"})
@@ -719,15 +772,18 @@ function cartogramOff() {
 
   zoomed();
   d3.select("#cartoOffButton").style("display", "none")
+      if (psEffects == true) {
+      drawBorders();
+  }
+
 
 }
 
 function calculateRoute() {
   var newSettings = getSettings();
-  routesRun.splice(0,0,newSettings)
 
   d3.select(".calculateDisable").style("display", "block");
-//  routeQuery = "new_route.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&s="+newSettings.source+"&t="+newSettings.target+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
+  routeQuery = "new_route.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&s="+newSettings.source+"&t="+newSettings.target+"&tr="+newSettings.riverTransfer+"&ts="+newSettings.seaTransfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded;
   d3.selectAll("span.emptyHistory").remove();
 
   _gaq.push(['_trackEvent', 'interaction', "route", newSettings.source+"|"+newSettings.target]);
@@ -741,6 +797,7 @@ function calculateRoute() {
 	routeData.features[x].properties.routeID = currentRoute;
       }
     }
+    routesRun[currentRoute] = newSettings;
     currentRoute++;
     for (x in routeData.features) {
       	var realSource = routeData.features[x].properties.source.toString().length == 6 ? routeData.features[x].properties.source.toString().substring(1,6) : routeData.features[x].properties.source;
@@ -775,7 +832,7 @@ function calculateRoute() {
 
     zoomed();
     
-    populateRouteDialogue(newSettings.source,newSettings.target,currentRoute - 1);
+    populateRouteDialogue(currentRoute - 1);
     
     for (x in exposedsites) {
       exposedsites[x].betweenness = 0;
@@ -813,16 +870,19 @@ function getSettings() {
   var cartoDirection = d3.selectAll("#directionPicker > div > input").filter(function() {return d3.select(this).property("checked") ? this : null}).attr("value");
 
   var vehicleType = document.getElementById("vehicleSelectButton").value;
-  var transferCost = parseFloat(document.getElementById("transferCost").value);
-  isNaN(transferCost) ? transferCost = 0 : null;
+  var riverTransferCost = parseFloat(document.getElementById("riverTransferCost").value) / 2;
+  var seaTransferCost = parseFloat(document.getElementById("seaTransferCost").value) / 2;
+  isNaN(riverTransferCost) ? riverTransferCost = 0 : null;
+  isNaN(seaTransferCost) ? seaTransferCost = 0 : null;
   
+
   modeArray.push("self","ferry","transferc","transferf","transfero","transferr");
 
   modeList = modeArray.join("");
   
   var excludedIDs = "999," + excludedSites.toString();
   settingsID++;
- return {id: settingsID, modes: modeList, modeArr: modeArray, source: sourceID, target: targetID, month: monthID, priority: priority, vehicle: vehicleType, transfer: transferCost, excluded: excludedIDs, direction: cartoDirection}
+ return {id: settingsID, modes: modeList, modeArr: modeArray, source: sourceID, target: targetID, month: monthID, priority: priority, vehicle: vehicleType, seaTransfer: seaTransferCost, riverTransfer: riverTransferCost, excluded: excludedIDs, direction: cartoDirection}
   
 }
 
@@ -830,14 +890,14 @@ function routeClick(d,i) {
   d3.select('#routesContainer').style('opacity', .2);
   d3.event.stopPropagation();
   var coords = d3.mouse(document.body);
-  var modalContents = d3.select("#sitemodal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
+/*  var modalContents = d3.select("#sitemodal").style("display", "block").style("left", (coords[0] + 20) + "px").style("top", (coords[1] - 20) + "px").html('')
   modalContents.append("p").html(d.properties.segment_type + " route from " + d.properties.source.label + " to " + d.properties.target.label)
   modalContents.append("p").html("Duration: " + d.properties.segmentduration);
   modalContents.append("p").html("Length: " + d.properties.segmentlength);
   modalContents.append("p").html("Expense (D): " + d.properties.segmentexpense_d);
   modalContents.append("p").html("Expense (W): " + d.properties.segmentexpense_w);
-  modalContents.append("p").html("Expense (PC): " + d.properties.segmentexpense_c);
-  populateRouteDialogue(routesRun[d.properties.routeID].source,routesRun[d.properties.routeID].target,d.properties.routeID);
+  modalContents.append("p").html("Expense (PC): " + d.properties.segmentexpense_c); */
+  populateRouteDialogue(d.properties.routeID);
   d3.select(this).style("stroke", "red")
 
 }
@@ -849,8 +909,9 @@ function idToLabel(inID) {
   
 }
 
-function populateRouteDialogue(inSource,inTarget,inRouteID) {
-
+function populateRouteDialogue(inRouteID) {
+var inSource = routesRun[inRouteID].source;
+var inTarget = routesRun[inRouteID].target;
   d3.selectAll(".sitecirc").classed("sourcecirc", false);
   d3.selectAll(".sitecirc").classed("targetcirc", false);
   d3.selectAll(".slabel").classed("underlined", false);
@@ -869,21 +930,18 @@ function populateRouteDialogue(inSource,inTarget,inRouteID) {
 
   drawTimeline(d3.selectAll(".results").filter(function(d) {return d.properties.routeID == inRouteID}))
   
-  var routeModalContents = d3.select("#routeResults").style("display", "block").style("padding", "0").style("width", "0px").html('')
+  var routeModalContents = d3.select("#routeResults").html('')
   var segmentNumber = routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}).length;
   var durationSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentduration})
   var lengthSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentlength})
   var expCSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentexpense_c})
   var expDSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentexpense_d})
   var expWSum = d3.sum(routeSegments.filter(function (el) {return el.properties.routeID == inRouteID}), function (p,q) {return p.properties.segmentexpense_w})
-  routeModalContents.append("a").attr("id", "infoclosebutton").on("click", function () {d3.select('#routeResults').style('display','none')}).html("X")
   routeModalContents.append("p").style("padding-right", "30px").html("The " + priorityType[tRoute.priority] + " journey from <span class='boldRed'>" + inSource + "</span> to <span class='boldRed'>" + inTarget + "</span> in <span class='bold'>" + monthNames[tRoute.month] + "</span> takes <span class='bold'>" + d3.round(durationSum,1) + " days</span>, covering <span class='bold'>"+Math.floor(lengthSum) + " kilometers</span>.")
   routeModalContents.append("p").style("border-top", "1px lightgray solid").style("margin-top", "10px").html("Prices in <span class='italic'>denarii</span>, based on the use of a faster sail ship and a civilian river boat (where applicable), and on these road options:")
   routeModalContents.append("p").html(" * Per kilogram of wheat (by donkey): <span class='bold'>" + d3.round(expDSum,2) + "</span>")
   routeModalContents.append("p").html(" * Per kilogram of wheat (by wagon): <span class='bold'>" + d3.round(expWSum,2) + "</span>")
   routeModalContents.append("p").html(" * Per passenger in a carriage: <span class='bold'>" + d3.round(expCSum,2) + "</span>")
-  
-  routeModalContents.transition().duration(750).style("padding", "0 20px").style("width", "400px")
   zoomed();
 }
 
@@ -940,7 +998,7 @@ function clusterSitesUI() {
   var clusterControls = modalContents.append("p");
   clusterControls.append("button").on("click", clusterSites).html("Execute")
   clusterControls.append("span").html("Frontier Tolerance");
-  clusterControls.append("textarea").attr("id", "frontier").style("resize", "none").style("height", "20px").style("margin-left", "20px").style("width", "30px").html("0.0");
+  clusterControls.append("textarea").attr("id", "frontier").style("resize", "none").style("height", "20px").style("margin-left", "20px").style("width", "40px").html("0.0");
   clusterControls.append("img").attr("class", "helpicon").attr("src", "helpq.png").attr("data", "voronoi").on("click", function() {contextualHelp('frontier')})
 
   modalContents.append("p").append("button").on("click", exportCartoCSV).html("Export to CSV")
@@ -1000,7 +1058,8 @@ function clusterSites() {
   d3.selectAll("g.legend").remove();
   d3.select('#legendmodal').style('display','block').classed("horizontal", true);
   d3.select("#legendSVG").append("g").attr("transform", "translate(30,30)").attr("class", "legend").call(cartoLegend);
-  
+  d3.select("#legendTitle").html("Clusters")
+
     svg.selectAll(".sitecirctop")
   .transition()
   .duration(3000)
@@ -1015,34 +1074,33 @@ function clusterSites() {
 }
 
 function drawBorders() {
-  d3.select("#hullContainer").remove();
   groupPath = function(d) {
     return "M" + d3.geom.hull(d.values.map(function(i) {
-	return projection([i.x, i.y]);
+	return d3.transform(i.cartoTranslate).translate;
     })).join("L") + "Z";
 };
     groups = [];
-    for (centerX in matchedCartos) {
+//    for (centerX in matchedCartos) {
 	groups.push({
-	    key: matchedCartos[centerX],
-	    name: matchedCartos[centerX],
+	    key: 1,
+	    name: "England",
+	    vArray: ["50032", "50090", "50098", "50101", "50133", "50147", "50156", "50160", "50186", "50207", "50232", "50249", "50303", "50330", "50412", "50411", "50415", "50421", "50235", "50240"],
 	    values: [],
-	    color: clusterOrdinal(matchedCartos[centerX]),
-	    id: "O" + matchedCartos
+	    color: "black",
+	    id: "O"
 	})
-	for (x in exposedsites) {
-		if ((exposedsites[x])){
-		    if (exposedsites[x]["nearestCluster"] == matchedCartos[centerX]) {
-		    groups[(groups.length - 1)]["values"].push(exposedsites[x])
-		}
+	for (x in groups[0].vArray) {
+		    groups[0]["values"].push(siteHash[groups[0].vArray[x]])
 	    }
-	}
+	/*
 	if ((groups[(groups.length - 1)]["values"].length < 3) || (groups[(groups.length - 1)]["values"].length >= exposedsites.length)) {
 	    groups.pop();
-	}
-    }
+	} */
+//    }
 
-    var hullG = svg.insert("g", "#routesContainer").attr("id","hullContainer").selectAll("g.hull").data(groups).enter().append("g").attr("class","hull");
+  if (d3.select("#hullContainer").empty()) {
+
+    var hullG = svg.insert("g", "#sitesG").attr("id","hullContainer").style("pointer-events", "none").selectAll("g.hull").data(groups).enter().append("g").attr("class","hull");
     
     hullG.append("path").attr("id",function(d) {return "hull" + d.key}).attr("class", "hull")
     .style("fill", function(d) {
@@ -1050,12 +1108,16 @@ function drawBorders() {
     }).style("stroke", function(d) {
 	return d.color
     })
-    .style("stroke-width", 10 / zoom.scale())
+    .style("stroke-width", 4 / zoom.scale())
     .style("stroke-linejoin", "round")
-    .style("opacity", .40)
+    .style("fill-opacity", .40)
     .style("pointer-events", "none")
     .attr("d", groupPath)
     .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
+      }
+else {
+  d3.select("path.hull").transition().duration(3000).attr("d", groupPath)
+}
 }
 
 function closeTimelineTray() {
@@ -1229,7 +1291,8 @@ function addCartoRow(cartoSettings) {
   .style("height", "180px")
   .style("margin-bottom", "10px")
   .style("padding", "10px")
-  .attr("class", "cartoRow resultsRow")
+  .attr("class", "networkRow resultsRow networkDiv" + (cartogramsRun.length - 1))
+
 
   var newCartoGrid = d3.select("#recentGrid").append("div")
   .style("background", "white")
@@ -1240,83 +1303,99 @@ function addCartoRow(cartoSettings) {
   .style("padding", "5px")
   .style("float", "left")
   .style("position", "relative")
-  .attr("class", "cartoRow resultsRow")
+  .attr("class", "networkRow resultsRow networkDiv" + (cartogramsRun.length - 1))
 
   canvas = newCartoRow.append("canvas")
-  .style("background", "white").style("border", "black 1px solid").attr("height", 1000).attr("width", 1000)
+  .style("background", "white").style("border", "black 1px solid").attr("height", 700).attr("width", 1000)
   .attr("id", "newCanvas");
   
   context = canvas.node().getContext("2d");
   
-  var max = d3.max(exposedsites, function(p) {return parseFloat(p["cost"][0])});
-  var mid = max / 2;
-
-//  var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
-  var colorramp = d3.scale.quantize().domain([0,max]).range(colorbrewer.Spectral[6]);
-  var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
-
-  var sMaxA = d3.max(exposedsites, function (el) {return d3.transform(el.cartoTranslate).translate[0]});
-  var sMaxB = d3.max(exposedsites, function (el) {return d3.transform(el.cartoTranslate).translate[1]});
-  var sMinA = d3.min(exposedsites, function (el) {return d3.transform(el.cartoTranslate).translate[0]});
-  var sMinB = d3.min(exposedsites, function (el) {return d3.transform(el.cartoTranslate).translate[1]});
+    context.beginPath();
+  context.rect(0, 0, 1000, 700);
+  context.fillStyle = 'white';
+  context.fill();
+  context.lineWidth = 1;
+  context.strokeStyle = 'black';
+  context.stroke();
   
+  var projection2 = d3.geo.mercator()
+    .scale(900)
+    .translate([700, 1100])
+    .rotate([-26,2,0]);
+    
+    var path2 = d3.geo.path()
+    .projection(projection2);
+  
+  var land = topojson.feature(exposedroutes, exposedroutes.objects.base_routes)
+  var coast = topojson.feature(exposedCoast, exposedCoast.objects.coast)
+  context = canvas.node().getContext("2d");
+
   context.beginPath();
-  context.rect(0, 0, 1000, 1000);
+  context.rect(0, 0, 1000, 700);
   context.fillStyle = 'white';
   context.fill();
   context.lineWidth = 1;
   context.strokeStyle = 'black';
   context.stroke();
 
-  function drX(x) {
-    return (x * 4096) + 350;
+  context.strokeStyle = "rgba(0, 0, 0, 0.1)";
+  context.beginPath(), path2.context(context)(land), context.fill(), context.stroke();
+
+  context.strokeStyle = 'black';
+  context.lineWidth = 1;
+  context.beginPath(), path2.context(context)(coast), context.stroke();
+  
+  var t = cartogramsRun.length - 1;
+  var max = d3.max(exposedsites, function(p) {return parseFloat(p["cost"][t])});
+  var mid = max / 2;
+
+//  var colorramp=d3.scale.linear().domain([-1,0,0.01,mid,max]).range(["lightgray","cyan","#7e8fc3","#c28711","#ad5041"]);
+
+
+  var oSc = orbisColorScale;
+  switch (parseInt(cartogramsRun[t].priority)) {
+    case 0:
+      oSc = fastestScale;
+      break;
+    case 1:
+      oSc = cheapestScale;
+      break;
+    case 2:
+      oSc = shortestScale;
   }
-  function drY(y) {
-    return (y * 4096) + 1000;
-  }
-    d3.selectAll("path.links").each(function(d,i) {
-    context.strokeStyle = d.properties.fixedColor;
-    context.beginPath();
-      var vC = d.cartocoords;
-    context.moveTo(drX(vC[0][0]),drY(vC[0][1]));
-      var x = 1;
-      while (x < vC.length) {
-	context.lineTo(drX(vC[x][0]),drY(vC[x][1]));
-	x++;
-      }
-      context.stroke();
-    })
+  var colorramp = d3.scale.quantize().domain([0,max]).range(oSc);
+  var costramp=d3.scale.linear().domain([0,max]).range([0,1]);
+
     d3.selectAll("g.site").each(function(d,i) {
-    var siteCoords = d3.transform(d.cartoTranslate).translate;
-    siteCoords[0] = drX(siteCoords[0]);
-    siteCoords[1] = drY(siteCoords[1]);
-    
-    context.strokeStyle = 'black';
-    context.fillStyle = colorramp(d.cost[0]);
+    var coords = projection2([d.x,d.y])
+
+    context.fillStyle = colorramp(d.cost[t]);
     context.beginPath();
-    context.arc(siteCoords[0],siteCoords[1],5,0,2*Math.PI);
+    context.arc(coords[0],coords[1],5,0,2*Math.PI);
+    context.strokeStyle = "black";
+    context.lineWidth = 1;
+    context.stroke();
     context.fill();
 
     if (d3.select(this).select("text").empty() == false) {
-    context.lineWidth = 1;
-    context.stroke();
     context.font = "11pt Helvetica";
     context.textAlign = 'center';
     context.strokeStyle = "rgba(255, 255, 255, 0.5)";
     context.lineWidth = 3;
-    context.strokeText(d.label, siteCoords[0], siteCoords[1] - 8)
+    context.strokeText(d.label, coords[0], coords[1] - 8)
     context.fillStyle = 'black';
-    context.fillText(d.label, siteCoords[0], siteCoords[1] - 8)
+    context.fillText(d.label, coords[0], coords[1] - 8)
     }
     
   })
   
   var imgUrl = document.getElementById("newCanvas").toDataURL("image/png");
   var detailsDiv = newCartoRow.append("div").style("float", "left").style("width", "170px");
-  detailsDiv.append("img").attr("src", imgUrl).style("width", "170px").style("height", "170px");
+  detailsDiv.append("img").attr("src", imgUrl).style("width", "170px").style("height", "120px");
 
   var gridDiv = newCartoGrid.append("div").style("width", "170px");
-  gridDiv.append("img").attr("src", imgUrl).style("width", "140px").style("height", "140px")
+  gridDiv.append("img").attr("src", imgUrl).style("width", "140px").style("height", "100px")
   .style("cursor", "pointer")
   .attr("onclick", function() {return "cartogramOn("+ (cartogramsRun.length - 1) +"," + siteHash[cartoSettings.centerID].x + "," + siteHash[cartoSettings.centerID].y + ");runCarto(" + siteHash[cartoSettings.centerID].x + "," + siteHash[cartoSettings.centerID].y + "," + cartoSettings.centerID + "," + (cartogramsRun.length - 1) + ");"})
   newCartoGrid.append("span").style("position", "absolute").style("bottom", "10px")
@@ -1324,22 +1403,22 @@ function addCartoRow(cartoSettings) {
   
   canvas.remove();
   
-  formatSettings(cartoSettings, newCartoRow, imgUrl);
+  formatSettings(cartoSettings, newCartoRow, imgUrl, siteHash[cartoSettings.centerID].label + " Network", "network");
 
 }
 
 function addRouteRow(routeSettings, newRoute) {
   
-  var newCartoRow = d3.select("#recentList").append("div")
+  var newRow = d3.select("#recentList").append("div")
   .style("background", "white")
   .style("border", "1px lightgray solid")
   .style("width", "500px")
   .style("height", "180px")
   .style("margin-bottom", "10px")
   .style("padding", "10px")
-  .attr("class", "routeRow resultsRow")
+  .attr("class", "routeRow resultsRow routeDiv" + (currentRoute - 1))
 
-  var newCartoGrid = d3.select("#recentGrid").append("div")
+  var newGrid = d3.select("#recentGrid").append("div")
   .style("background", "white")
   .style("border", "1px lightgray solid")
   .style("width", "140px")
@@ -1348,9 +1427,9 @@ function addRouteRow(routeSettings, newRoute) {
   .style("padding", "5px")
   .style("float", "left")
   .style("position", "relative")
-  .attr("class", "routeRow resultsRow")
+  .attr("class", "routeRow resultsRow routeDiv" + (currentRoute - 1))
   
-  canvas = newCartoRow.append("canvas")
+  canvas = newRow.append("canvas")
   .style("background", "white").style("border", "black 1px solid").attr("height", 700).attr("width", 1000)
   .attr("id", "newCanvas");
     
@@ -1405,75 +1484,175 @@ var projection2 = d3.geo.mercator()
   context.beginPath();
   context.arc(coords[0], coords[1],5,0,2*Math.PI);
   context.fill();
-
     })
   
   var imgUrl = document.getElementById("newCanvas").toDataURL("image/png");
-  var detailsDiv = newCartoRow.append("div").style("float", "left").style("width", "170px");
+  var detailsDiv = newRow.append("div").style("float", "left").style("width", "170px");
   detailsDiv.append("img").attr("src", imgUrl).style("width", "170px").style("height", "120px");
 
-  var gridDiv = newCartoGrid.append("div").style("width", "140px");
+  var gridDiv = newGrid.append("div").style("width", "140px");
   gridDiv.append("img").attr("src", imgUrl).style("width", "140px").style("height", "100px")
   .style("cursor", "pointer")
-  .attr("onclick", function() { return "populateRouteDialogue(" + routeSettings.source + "," + routeSettings.target + "," + (routesRun.length - 1) + ");" })
+  .attr("onclick", function() { return "populateRouteDialogue(" + (currentRoute - 1) + ");" })
   ;
   
-  newCartoGrid.append("span").style("position", "absolute").style("bottom", "10px")
+  newGrid.append("span").style("position", "absolute").style("bottom", "10px")
   .html(siteHash[routeSettings.source].label + " -> " + siteHash[routeSettings.target].label)
     
   canvas.remove();
   
-  formatSettings(routeSettings, newCartoRow, imgUrl);
+  formatSettings(routeSettings, newRow, imgUrl,siteHash[routeSettings.source].label + " to " + siteHash[routeSettings.target].label, "route");
 
 }
 
-function formatSettings(incSettings, targetSelection, imgUrl) {
+function addFlowRow(flowSettings) {
+  
+  var newRow = d3.select("#recentList").append("div")
+  .style("background", "white")
+  .style("border", "1px lightgray solid")
+  .style("width", "500px")
+  .style("height", "180px")
+  .style("margin-bottom", "10px")
+  .style("padding", "10px")
+  .attr("class", "flowRow resultsRow flowDiv" + (flowsRun.length - 1))
+
+
+  var newGrid = d3.select("#recentGrid").append("div")
+  .style("background", "white")
+  .style("border", "1px lightgray solid")
+  .style("width", "140px")
+  .style("height", "140px")
+  .style("margin", "10px")
+  .style("padding", "5px")
+  .style("float", "left")
+  .style("position", "relative")
+  .attr("class", "flowRow resultsRow flowDiv" + (flowsRun.length - 1))
+  
+  canvas = newRow.append("canvas")
+  .style("background", "white").style("border", "black 1px solid").attr("height", 700).attr("width", 1000)
+  .attr("id", "newCanvas");
+    
+  var diameter = 500,
+    radius = diameter/2;
+
+var projection2 = d3.geo.mercator()
+    .scale(900)
+    .translate([700, 1100])
+    .rotate([-26,2,0]);
+    
+    var path2 = d3.geo.path()
+    .projection(projection2);
+  
+  var land = topojson.feature(exposedroutes, exposedroutes.objects.base_routes)
+  var coast = topojson.feature(exposedCoast, exposedCoast.objects.coast)
+  context = canvas.node().getContext("2d");
+
+  context.beginPath();
+  context.rect(0, 0, 1000, 700);
+  context.fillStyle = 'white';
+  context.fill();
+  context.lineWidth = 1;
+  context.strokeStyle = 'black';
+  context.stroke();
+
+  context.strokeStyle = "rgba(0, 0, 0, 1)";
+  for (x in exposedroutes.objects.base_routes.geometries) {
+  var flowSeg = topojson.feature(exposedroutes, exposedroutes.objects.base_routes.geometries[x])
+
+  if (flowSeg.properties.fixedWidth > 1) { 
+    context.lineWidth = flowSeg.properties.fixedWidth;
+    context.beginPath(), path2.context(context)(flowSeg), context.stroke();
+  }
+  }
+
+  context.strokeStyle = 'black';
+  context.lineWidth = 1;
+  context.beginPath(), path2.context(context)(coast), context.stroke();
+  
+  var drawRoutes = exposedroutes.objects.base_routes.geometries;
+    
+  d3.selectAll("g.site").filter(function(el) {return d3.select(this).select("text").empty() == false}).select("text")
+  .each(function(d,i) {
+    var coords = projection2([d.x,d.y])
+  context.font = "11pt Helvetica";
+  context.textAlign = 'center';
+  context.strokeStyle = "rgba(255, 255, 255, 0.5)";
+  context.lineWidth = 3;
+  context.strokeText(d.label, coords[0], coords[1] - 8)
+  context.fillStyle = 'black';
+    context.fillText(d.label, coords[0], coords[1] - 8)
+    })
+  
+  var imgUrl = document.getElementById("newCanvas").toDataURL("image/png");
+  var detailsDiv = newRow.append("div").style("float", "left").style("width", "170px");
+  detailsDiv.append("img").attr("src", imgUrl).style("width", "170px").style("height", "120px");
+
+  var gridDiv = newGrid.append("div").style("width", "140px");
+  gridDiv.append("img").attr("src", imgUrl).style("width", "140px").style("height", "100px")
+  .style("cursor", "pointer")
+  ;
+  
+  newGrid.append("span").style("position", "absolute").style("bottom", "10px")
+  .html(siteHash[flowSettings.centerID].label + " Flow")
+//  .html(siteHash[routeSettings.source].label + " -> " + siteHash[routeSettings.target].label)
+    
+  canvas.remove();
+  formatSettings(flowSettings, newRow, imgUrl, siteHash[flowSettings.centerID].label + " Flow", "flow");
+
+}
+
+function formatSettings(incSettings, targetSelection, imgUrl, rowLabel, rowType) {
   exposedSettings = incSettings;
   
-  var longLable = incSettings.centerID ? siteHash[incSettings.centerID].label + " Cartogram" : siteHash[incSettings.source].label + " to " + siteHash[incSettings.target].label;
   var da = new Date();
   var dateStamp = da.getMonth + " - " + da.getDate() + " - " + da.getFullYear();
 
   var annotationDiv = targetSelection.append("div").style("overflow", "hidden").style("padding-left", "10px").style("width", "300px").style("float", "left");
 
   annotationDiv.append("h3").style("margin-top", 0)
-  .html(longLable)
+  .html(rowLabel)
 
 
   annotationDiv.append("p").html("Priority: " + incSettings.priority
-    + ", Month: " + incSettings.month + ", vehicle: " + incSettings.vehicle + ", transfer cost: " +
-    incSettings.transfer + "modes: ");
+    + ", Month: " + incSettings.month + ", vehicle: " + incSettings.vehicle + ", River Transfer Cost: " +incSettings.riverTransfer + ", Sea Transfer Cost: " +incSettings.seaTransfer + " modes: ");
   annotationDiv.append("button").html("Open in a new tab")
   .on ("click", function () {
-  var newPage1 = "<html><head><title>" + longLable + "</title></head><style>div: {width:100%;}</style><body><div><h1>" + longLable + "</div><div><img src='";
-  var newPage2 = "' /></div><div><p>Scheidel, W. and Meeks, E. (May 2, 2012). ORBIS: The Stanford Geospatial Network Model of the Roman World. Retrieved " + da.toDateString() + ", from http://orbis.stanford.edu.</div></body></html>";
-
-  annotationDiv.append("button").html("delete");
-
-  annotationDiv.append("button").html("hide");
-  
+  var newPage1 = "<html><head><title>" + rowLabel + "</title></head><style>div: {width:100%;}</style><body><div><h1>" + rowLabel + "</div><div><img src='";
+  var newPage2 = "' /></div><div><p>Scheidel, W. and Meeks, E. (May 2, 2012). ORBIS: The Stanford Geospatial Network Model of the Roman World. Retrieved " + da.toDateString() + ", from http://orbis.stanford.edu.</div></body></html>";  
   var opened = window.open("", "_blank");
   window.focus();
-  opened.document.write(newPage1 + imgUrl + newPage2);
-    
+  opened.document.write(newPage1 + imgUrl + newPage2);    
   }
        )
-  
-  if (incSettings.centerID) {    
+  var divRemove = '';
+  if (rowType == "network") {
+    divRemove = "networkDiv"+ (cartogramsRun.length - 1);
       annotationDiv.append("button").html("Redisplay")
       .attr("onclick", function() {return "cartogramOn("+ (cartogramsRun.length - 1) +"," + siteHash[incSettings.centerID].x + "," + siteHash[incSettings.centerID].y + ");runCarto(" + siteHash[incSettings.centerID].x + "," + siteHash[incSettings.centerID].y + "," + incSettings.centerID + "," + (cartogramsRun.length - 1) + ");"})
+      annotationDiv.append("button").html("Delete").attr("class", "delete")
+      .attr("onclick", function() {return "d3.select(this.parentNode).remove();d3.selectAll('."+ divRemove +"').remove();"})
   }
+  else if (rowType == "route"){
+    divRemove = "routeDiv"+ (currentRoute - 1);
+    annotationDiv.append("button").html("Redisplay")
+    .attr("onclick", function() { return "populateRouteDialogue("+ (currentRoute - 1) + ");" })
+    annotationDiv.append("button").html("Delete").attr("class", "delete")
+    .attr("onclick", function() {return "d3.selectAll('.results').filter(function(d) {return d.properties.routeID == "+ (currentRoute - 1)+"}).remove();routeSegments = routeSegments.filter(function(d) {return d.properties.routeID != " + (currentRoute - 1)+ "});d3.select(this.parentNode).remove();d3.selectAll('."+ divRemove +"').remove();"})
+  }
+
   else {
-      annotationDiv.append("button").html("Redisplay")
-      .attr("onclick", function() { return "populateRouteDialogue(" + incSettings.source + "," + incSettings.target + "," + (routesRun.length - 1) + ");" })
+    divRemove = "flowDiv"+ (flowsRun.length - 1);
+      annotationDiv.append("button").html("Delete").attr("class", "delete")
+      .attr("onclick", function() {return "d3.select(this.parentNode).remove();d3.selectAll('."+ divRemove +"').remove();"})    
   }
+  
 
 
   
-  var newRow = d3.select("#recTableActual").append("tr").attr("class", incSettings.centerID ? "cartoRow resultsRow" : "routeRow resultsRow");
+  var newRow = d3.select("#recTableActual").append("tr").attr("class", rowType + "Row resultsRow "+divRemove);
 
   newRow.append("td").html(siteHash[incSettings.source].label)
-  newRow.append("td").html(incSettings.centerID ? "Cartogram" : siteHash[incSettings.target].label)
+  newRow.append("td").html(incSettings.centerID ? rowType : siteHash[incSettings.target].label)
   newRow.append("td").html(incSettings.priority)
   newRow.append("td").html(incSettings.month)
   newRow.append("td").html(incSettings.vehicle)
@@ -1495,7 +1674,7 @@ function formatSettings(incSettings, targetSelection, imgUrl) {
   }
     else {
       imgButton
-      .attr("onclick", function() { return "populateRouteDialogue(" + incSettings.source + "," + incSettings.target + "," + (routesRun.length - 1) + ");" })
+      .attr("onclick", function() { return "populateRouteDialogue(" + (currentRoute - 1) + ");" })
   }
   
 //  var figureDiv = targetSelection.append("div").style("width", "500px").style("overflow", "hidden")
@@ -1600,31 +1779,27 @@ function createVoronoi() {
       clearVoronoi();
       return;
     }
+    networkOff();
   zoomed();
-  var colorArray = [];
+  colorArray = [];
   clippingPolys = [];
   var cPS = zoom.scale() / 80;
 
-  var forVoronoi = [];
-  
-  exposedFV = forVoronoi;
-  
+  forVoronoi = [];
+    
   d3.selectAll(".sitecirctop")
   .filter(function() {return !cartogramRunning || d3.select(this).style("fill") != "#d3d3d3"})
   .each(function(el) {
     forVoronoi.push(
 		    {
-//		    x: (d3.transform(el.cartoTranslate).translate[0] * zoom.scale()) + zoom.translate()[0],
-//		    y: (d3.transform(el.cartoTranslate).translate[1] * zoom.scale()) + zoom.translate()[1]
 		    x: d3.transform(el.cartoTranslate).translate[0],
-		    y: d3.transform(el.cartoTranslate).translate[1]
+		    y: d3.transform(el.cartoTranslate).translate[1],
+		    color: d3.select(this).style("fill")
 		    });
-    colorArray.push(d3.select(this).style("fill"));
     })
   
   clearVoronoi();
   voronoiRunning = true;
-  d3.selectAll("g.site").selectAll("circle").style("display", function(d) { return d.cost[d["nearestCluster"]] == 0 ? "block" : "none"})
   
   vorXExtent = d3.extent(forVoronoi, function(d) {return d.x})
   vorYExtent = d3.extent(forVoronoi, function(d) {return d.y})
@@ -1634,56 +1809,31 @@ function createVoronoi() {
     var vxScale = d3.scale.linear().range(vorXExtent).domain([0,1]);
     var vyScale = d3.scale.linear().range(vorYExtent).domain([0,1]);
   for (var x=0.05;x<.7;x+=.05) {
-    forVoronoi.push({x: vxScale(x), y: vyScale(Math.max(.75, x + .4))})
-    colorArray.push("none");
+    forVoronoi.push({x: vxScale(x), y: vyScale(Math.max(.75, x + .4)), color: "none"})
   }
   for (var y=0.75;y<1;y+=.05) {
-    forVoronoi.push({x: vxScale(.9), y: vyScale(y)})
-    colorArray.push("none");    
+    forVoronoi.push({x: vxScale(.9), y: vyScale(y), color: "none"})
   }
 
   for (var x=0.35;x<1;x+=.05) {
-    forVoronoi.push({x: vxScale(x), y: vyScale(Math.max(.15, x + -.7))})
-    colorArray.push("none");    
+    forVoronoi.push({x: vxScale(x), y: vyScale(Math.max(.15, x + -.7)), color: "none"})
   }
 
-    forVoronoi.push({x: vxScale(.3), y: vyScale(.05)})
-    colorArray.push("none");       
-
-    forVoronoi.push({x: vxScale(.97), y: vyScale(.7)})
-    colorArray.push("none");    
-
-    forVoronoi.push({x: vxScale(.98), y: vyScale(.55)})
-    colorArray.push("none");    
-    
-    forVoronoi.push({x: vxScale(.98), y: vyScale(.35)})
-    colorArray.push("none");
-
-    forVoronoi.push({x: vxScale(.025), y: vyScale(.05)})
-    colorArray.push("none");
-
-    forVoronoi.push({x: vxScale(.05), y: vyScale(.3)})
-    colorArray.push("none");
-
-    forVoronoi.push({x: vxScale(.55), y: vyScale(.25)})
-    colorArray.push("none");
-
-    forVoronoi.push({x: vxScale(.6), y: vyScale(.275)})
-    colorArray.push("none");
-
-    forVoronoi.push({x: vxScale(.65), y: vyScale(.275)})
-    colorArray.push("none");
-
-    forVoronoi.push({x: vxScale(.7), y: vyScale(.3)})
-    colorArray.push("none");
-
-    forVoronoi.push({x: vxScale(.75), y: vyScale(.275)})
-    colorArray.push("none");
-
+    forVoronoi.push({x: vxScale(.3), y: vyScale(.05), color: "none"})
+    forVoronoi.push({x: vxScale(.97), y: vyScale(.7), color: "none"})
+    forVoronoi.push({x: vxScale(.98), y: vyScale(.55), color: "none"})
+    forVoronoi.push({x: vxScale(.98), y: vyScale(.35), color: "none"})
+    forVoronoi.push({x: vxScale(.025), y: vyScale(.05), color: "none"})
+    forVoronoi.push({x: vxScale(.05), y: vyScale(.3), color: "none"})
+    forVoronoi.push({x: vxScale(.55), y: vyScale(.25), color: "none"})
+    forVoronoi.push({x: vxScale(.6), y: vyScale(.275), color: "none"})
+    forVoronoi.push({x: vxScale(.65), y: vyScale(.275), color: "none"})
+    forVoronoi.push({x: vxScale(.7), y: vyScale(.3), color: "none"})
+    forVoronoi.push({x: vxScale(.75), y: vyScale(.275), color: "none"})
   }
     
-  var colorSet = d3.set(colorArray);
-  var colorKeys = colorSet.values();
+  colorSet = d3.set(forVoronoi.map(function(d) {return d.color}));
+  colorKeys = colorSet.values();
   
   var vM = Math.abs(vorXExtent[0] - vorYExtent[0]) * .025;
   
@@ -1693,46 +1843,50 @@ function createVoronoi() {
   .y(function (el) {return el.y});
   
   topology = voronoi.topology(forVoronoi);
+  var vorPath = d3.geo.path()
+    .projection(null);
 
+    for (x in topology.objects.voronoi.geometries) {
+      topology.objects.voronoi.geometries[x].color = forVoronoi[x].color;
+    }
+    
     d3.select("#voronoiG").remove();
-    for (x in colorKeys) {
-      if (colorKeys[x] != "none") {
-  d3.select("#mapSVG").insert("g", "#sitesG").attr("id", "voronoiG").attr("class", "voronoi " + colorKeys[x])
-//        .datum(topojson.merge(topoCollection, topoCollection.objects.voronoi.geometries))
-        .datum(topojson.merge(topology, topology.objects.voronoi.geometries.filter(function(d,i) { return colorArray[i] == colorKeys[x]})))
+  d3.select("#mapSVG").insert("g", "#sitesG").attr("id", "voronoiG")
+  .call(zoom)
+  .selectAll("path")
+    .data(d3.nest()
+      .key(function(d) { return d.color; })
+      .entries(topology.objects.voronoi.geometries).filter(function(d) {return d.key != "none"}))
+  .enter().append("path")
+    .attr("class", function(d) {return "voronoi voronoi-cell "+d.key})
+    .style("fill", function(d) { return d.key; })
+//    .style("stroke",  function(d) { return d3.hsl(d.key).darker(); })
+    .style("stroke",  "black")
+    .style("stroke-width", scaled(1))
+    .style("stroke-dasharray", scaled(5) +","+ scaled(5))
+    	.style("opacity", .5)
 	.on("mouseover", vorOver)
         .on("mouseout", vorOut)
-	.style("opacity", .7)
-	.call(zoom)
-	.selectAll("path.voronoi")
-	.data(function(d) {return d.coordinates})
-      .enter().append("path")
-      .attr("class", "voronoi")
-        .style("fill", colorKeys[x])
-        .style("stroke", d3.hsl(colorKeys[x]).darker())
-//        .style("stroke-width", "1px")
-	.attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
-	.style("stroke-width", function(d) {return scaled(1)})
-        .attr("d", function (d) {return "M" + d.join("L") + "Z";})
-//	.attr("d", transformCoordinates)
-      }
-    }
-
+  .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
+  .attr("d", function(d) { return vorPath(topojson.merge(topology, d.values)); });
+  
   function vorOver(d,i) {
-    var cClass = d3.select(this).attr("class")
-    d3.selectAll("g.Voronoi")
-      .filter(function () {return cClass == d3.select(this).attr("class")}).style("opacity", .95);
-      var siteNumber = d3.selectAll(".sitecirctop")
-      .filter(function (p,q) {return "voronoi " + d3.select(this).style("fill") == cClass}).size();
-    
+  var cClass = d3.select(this).style("fill");
+  d3.selectAll("path.voronoi-cell").style("opacity", .5);
+  d3.select(this).style("opacity", .95).style("stroke-dasharray", 0);
+
   d3.select("#infopopup").style("display", "block");
+
+  var siteNumber = d3.selectAll(".sitecirctop")
+  .filter(function (p,q) {return d3.select(this).style("fill") == cClass}).size();
+      
   d3.select("#infocontent").html("<p>" + siteNumber + " sites in this region</p>");
   }
 
   function vorOut(d) {
-  d3.selectAll("g.voronoi").style("opacity", .7);
+  d3.selectAll("path.voronoi-cell").style("opacity", .7).style("stroke-dasharray", scaled(5) +","+ scaled(5))
   d3.select("#infopopup").style("display", "none");
-  
+
   }
   
   d3.selectAll(".routes")
@@ -1782,7 +1936,6 @@ function createVoronoi() {
 function clearVoronoi() {
   voronoiRunning = false;
   colorByType(true);
-  d3.selectAll("g.site").selectAll("circle").style("display", "block")
   d3.selectAll("path.voronoi").remove();
   d3.selectAll("g.voronoi").remove();
   d3.selectAll("clipPath").remove();
@@ -1800,8 +1953,9 @@ function drawTimeline(selectedRoutes) {
   })
   
   d3.select("#timelineViz").style("display", "block")
-  var canvWidth = parseInt(d3.select("#timelineSVG").style("width"));
-  var canvHeight = parseInt(d3.select("#timelineSVG").style("height"));
+  var canvWidth = parseInt(d3.select("#timelineViz").style("width")) - 340;
+  d3.select("#timelineSVG").attr("width", canvWidth)
+  var canvHeight = parseInt(d3.select("#timelineViz").style("height"));
   var canvMargin = 20;
   
   var xMin = d3.min(timelineRoutes, function(d) {return d3.min(d.coordinates, function(p) {return p[0]})});
@@ -1846,7 +2000,7 @@ function drawTimeline(selectedRoutes) {
   .on("mouseover", function(d) {this.parentNode.appendChild(this);d3.select("#site_g_" + d.id).select(".sitecirc").style("stroke", "red").style("stroke-width", scaled(50));d3.select(this).selectAll("text").style("display", "block")})
   .on("mouseout", function(d) {d3.select("#site_g_" + d.id).select(".sitecirc").style("stroke", "none");d3.select(this).selectAll("text").style("display", "none")});
   
-  d3.selectAll("g.timelineSites").append("circle").style("fill", "#ad5041").style("stroke", "black").style("stroke-width", "1px").attr("r", 4);
+  d3.selectAll("g.timelineSites").append("circle").style("fill", "white").style("stroke", "black").style("stroke-width", "1px").attr("r", 4);
 
   d3.selectAll("g.timelineSites")
   .append("text").style("pointer-events", "none").attr("y", -5).style("display", "none").style("text-anchor", "middle").style("fill", "white").style("stroke", "white").style("stroke-width", "3px").style("opacity",.75).style("font-weight", 900).text(function(d) {return d.label})
@@ -1920,7 +2074,7 @@ function drawTimeline(selectedRoutes) {
     }
     updateAxis(roughDistortedXScale);
 
-    var steppingPoint = siteHash[routesRun[0].source];
+    var steppingPoint = siteHash[routesRun[currentRoute - 1].source];
       var currentCost = 0;
       var moreRoutes = true;
       var calculatedRoutes = [];
@@ -2020,7 +2174,6 @@ function switchControls(switchType) {
   else {
     d3.select("#routeCalculateButton").style("display", "inline");
     d3.select("#targetSelectLabel").style("display", "inline");
-    d3.select("#targetSelectButton").style("display", "inline")
     d3.select("#sourceSelectLabel").html("From");
     d3.select("#directionDiv").style("display", "none");
   }
@@ -2031,6 +2184,7 @@ function calculateCarto() {
 }
 
 function calculateSankey() {
+    flowsRun.push(getSettings());
   geoSankey(getSettings().source);
 }
 
@@ -2137,16 +2291,16 @@ function mapOff(opacSetting) {
   }
 }
 
-function sitesOff() {
-    if (d3.select("g.site").style("display") == "none") {
-    d3.selectAll("g.site").style("display", "block")
-    d3.select("#sitesOnButton").style("background", "#D6E0EB")
-  }
-  else {
-    d3.selectAll("g.site").style("display", "none")
+function sitesOff(override) {
+  if (!d3.selectAll(".sitecirctop").filter(function() {return d3.select(this).style("display") != "none" }).empty() || override) {
+    displaySites = false;
     d3.select("#sitesOnButton").style("background", "#767676")
   }
-
+  else {
+    displaySites = true;
+    d3.select("#sitesOnButton").style("background", "#D6E0EB")
+  }
+  zoomed();
 }
 
 function networkOff() {
@@ -2163,7 +2317,7 @@ function networkOff() {
 
 function temporaryLabels() {
   if (d3.selectAll(".hoverlabel").empty()) {
-    d3.selectAll("g.site").each(function(d,i) {siteOver(d,i)});
+    d3.selectAll("g.site").each(function(d,i) {siteOver(d,i,this)});
     d3.select("#labelsOnButton").style("background", "#D6E0EB")
   }
   else {
@@ -2201,7 +2355,7 @@ function geoSankey(centerID) {
   sankeyHash = {};
 
   d3.select(".calculateDisable").style("display", "block");
-//    minardQuery = "sankey_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tc="+newSettings.transfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded+"&d="+newSettings.direction;
+  minardQuery = "sankey_carto.php?v="+newSettings.vehicle+"&m="+newSettings.month+"&c="+centerID+"&tr="+newSettings.riverTransfer+"&ts="+newSettings.seaTransfer+"&p="+newSettings.priority+"&ml="+newSettings.modes+"&el="+newSettings.excluded+"&d="+newSettings.direction;
 
       _gaq.push(['_trackEvent', 'interaction', "minard", centerID]);
 
@@ -2215,8 +2369,6 @@ function geoSankey(centerID) {
     freqMax = d3.max(cartoData.filter(function (el) {return el.source != el.target}), function (d) {return parseInt(d.freq)});
     freqScale = d3.scale.linear().domain([1,10,25,50,100,200,freqMax]).range([2,6,10,14,16,20,25]);
     freqColor = d3.scale.linear().domain([1,10,25,50,100,200,freqMax]).range(colorbrewer.Purples[7]);
-//    freqScale = d3.scale.linear().domain([1,freqMax]).range([2,20]);
-//    freqColor = d3.scale.linear().domain([freqMax,1]).range(["red","blue"]);
     
     d3.selectAll("path.routes").each(
       function(d) {
@@ -2224,7 +2376,6 @@ function geoSankey(centerID) {
       var realTarget = d.properties.tid.toString().length == 6 ? d.properties.tid.toString().substring(1,6) : d.properties.tid;
       if (sankeyHash[realSource+"-"+realTarget]) {
 	d.properties.fixedWidth = freqScale(sankeyHash[realSource+"-"+realTarget]);
-//	d.fixedColor = freqColor(sankeyHash[realSource+"-"+realTarget]);
   	d.properties.fixedColor = "black";
 	d.properties.lastFreq = parseInt(sankeyHash[realSource+"-"+realTarget]);
       }
@@ -2235,27 +2386,29 @@ function geoSankey(centerID) {
       }
       })
   zoomComplete();
+  addFlowRow(newSettings);
   })
-  d3.selectAll("circle").style("display", "none")
   mapOff(.2);
   d3.select("#sankeyButton").style("display", "inline")
-  
   d3.selectAll(".sitecirc").classed("sourcecirc", false);
   d3.selectAll(".sitecirc").classed("targetcirc", false);
   d3.selectAll(".slabel").classed("underlined", false);
   siteLabel("site_g_"+centerID,true);
+  
+
+  sitesOff(true);
+  zoomed();
 }
 
 function sankeyOff() {
       d3.select("#sankeyButton").style("display", "none");
-      d3.selectAll("circle").style("display", "block")
       mapOff(1);
       d3.selectAll("path.routes").each(
       function(d) {
 	d.properties.fixedWidth = 2;
   	d.properties.fixedColor = typeHash[d.properties.t];
       })
-      zoomComplete();
+      zoomed();
 }
 
 function contextualHelp(helpString) {
@@ -2416,6 +2569,75 @@ function resizeMap() {
 
 }
 
+function resetMap() {
+  cartogramOff();
+  sankeyOff();
+  clearVoronoi();
+  stopBrushing();
+  massSiteChange('all');
+  colorByType();
+  function fireClick(node){
+	if ( document.createEvent ) {
+		var evt = document.createEvent('MouseEvents');
+		evt.initEvent('click', true, false);
+		node.dispatchEvent(evt);	
+	} else if( document.createEventObject ) {
+		node.fireEvent('onclick') ;	
+	} else if (typeof node.onclick == 'function' ) {
+		node.onclick();	
+	}
+}
+
+d3.selectAll("button.delete").each(function () {
+  fireClick(this);
+})
+}
+
+function showHide(containerName) {
+  switch (containerName) {
+    case "networkModes":
+      d3.select("#networkModeContainer").style("height") == "20px" ? d3.select("#networkModeContainer").transition().duration(500).style("height", "145px") : d3.select("#networkModeContainer").transition().duration(500).style("height", "20px")
+      break;
+    case "aquaticOptions":
+      d3.select("#aquaticOptionsContainer").style("height") == "20px" ? d3.select("#aquaticOptionsContainer").transition().duration(500).style("height", "65px") : d3.select("#aquaticOptionsContainer").transition().duration(500).style("height", "20px")
+      break;
+    case "travelMonth":
+      if (d3.select(".season").style("display") == "none") {
+	d3.select("#monthPicker").selectAll("*").style("display", "none");
+	d3.selectAll(".season").style("display", "inline");
+	d3.selectAll("label.season").style("display", "inline-block");
+	d3.select("#summer").property("checked", true)
+	d3.select("#travelMonthLabel").html("Season of Departure");
+      }
+      else {
+	d3.select("#monthPicker").selectAll("*").style("display", "inline");
+	d3.selectAll(".season").style("display", "none");	
+	d3.select("input.season").property("checked", true)
+	d3.select("#jul").property("checked", true)
+	d3.select("#travelMonthLabel").html("Month of Departure");
+      }
+      break;
+  }
+}
+
+function psStyle() {
+  cheapestScale = colorbrewer.Reds[8];
+  fastestScale = colorbrewer.Blues[8];
+    lastCartoRan;
+    runCarto(siteHash[cartogramsRun[lastCartoRan].centerID].x,siteHash[cartogramsRun[lastCartoRan].centerID].y,cartogramsRun[lastCartoRan].centerID, lastCartoRan);
+    d3.select("#legendmodal").style("left", "310px").style("width", "650px")
+    drawBorders();
+    psEffects = true;
+
+    var iL = [50024,50017,50107,50429,50235,50129,50327,50359,50379,50124,50549,50213];
+    var iN = ["(Antioch)","","(Tunis)","(Lyon)","(London)","(Istanbul)","(Rome)","(Sremska Mitrovica)","(Tarragona)","(Trier)","(Corinth)","(Jerusalem)"];
+    
+    for(x in iL) {
+      d3.select("#site_g_" + iL[x]).append("text").text(iN[x]).attr("class", "pslabel").style("stroke", "white").style("pointer-events", "none")
+      d3.select("#site_g_" + iL[x]).append("text").text(iN[x]).attr("class", "pslabel").style("pointer-events", "none")
+    }
+    zoomed();
+}
 
 ///Analytics
 var _gaq = _gaq || [];

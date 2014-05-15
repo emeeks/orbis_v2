@@ -18,6 +18,7 @@ path {
   stroke: red;
   stroke-linejoin: round;
   stroke-linecap: round;
+  stroke-dasharray: 5,5;
 }
 
 button {
@@ -101,7 +102,6 @@ button.disabled {
 
 .tutorial {
   position:absolute;
-  top:300px;
   width:300px;
   min-height: 100px;
   z-index: 2;
@@ -135,12 +135,11 @@ button.disabled {
 }
 
 #legendmodal {
-  right:10px;
-  bottom:100px;
-  top:auto;
-  height:80px;
-  width:650px;
-  left:auto;
+  background: white;
+  left:450px;
+  top:40px;
+  height:90px;
+  width:410px;
   display:none; 
 }
 
@@ -159,6 +158,7 @@ button.disabled {
   background:none;
   padding:1px 5px;
   cursor:pointer;
+  z-index: 2;
 }
 
 #infoclosebutton:hover {
@@ -166,14 +166,14 @@ button.disabled {
 }
 
 #routeResults {
-  width: 400px;
-  bottom: 50px;
-  left: 300px;
+  width: 300px;
   overflow:hidden;
   border: 5px solid #F0F0F0;
   position: absolute;
   background: white;
-  display: none;
+  bottom: 0;
+  padding: 0 15px;
+  font-size:12px;
 }
 
 #routeResults > p {
@@ -215,10 +215,6 @@ transform: rotate(45deg);
 #monthPicker > input:checked {
 color: white;
 background: #302e42;
-background-image: -webkit-linear-gradient(top, #302e42, #29253b);
-background-image: -moz-linear-gradient(top, #302e42, #29253b);
-background-image: -o-linear-gradient(top, #302e42, #29253b);
-background-image: linear-gradient(to bottom, #302e42, #29253b);
 }
 #monthPicker > label {
   position: relative;
@@ -236,10 +232,10 @@ background-image: linear-gradient(to bottom, #302e42, #29253b);
 content: '';
 position: absolute;
 top: -2px;
-bottom: -2px;
+bottom: -5px;
 left: -2px;
 right: -2px;
-border: 2px solid;
+border-bottom: 4px solid;
 border-color: #205fa4 #205fb4 #205fc4;
 opacity: 0;
 -webkit-box-shadow: 0 0 1px rgba(0, 0, 0, 0.2);
@@ -249,6 +245,46 @@ box-shadow: 0 0 1px rgba(0, 0, 0, 0.2);
 input:checked + .month-picker-label:before {
 opacity: 1;
 }
+
+#priorityForm > input {
+  position: absolute;
+  clip: rect(1px, 1px, 1px, 1px);
+}
+
+#priorityForm > input:checked {
+color: white;
+background: #302e42;
+}
+#priorityForm > label {
+  position: relative;
+  padding: 0 7px;
+  font-size: 14px;
+  font-weight: 200;
+  text-transform: uppercase;
+  display: inline-block;
+  line-height: 25px;
+  vertical-align: top;
+  cursor: pointer;
+}
+
+.priority-picker-label:before {
+content: '';
+position: absolute;
+top: -2px;
+bottom: -5px;
+left: -2px;
+right: -2px;
+border-bottom: 4px solid;
+border-color: #205fa4 #205fb4 #205fc4;
+opacity: 0;
+-webkit-box-shadow: 0 0 1px rgba(0, 0, 0, 0.2);
+box-shadow: 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .priority-picker-label:before {
+opacity: 1;
+}
+
 
 .fieldTitle {
   margin-left: 10px;
@@ -297,10 +333,9 @@ opacity: 1;
 .tab {
   position: absolute;
   z-index: 1;
-  top: -30px;
+  top: -28px;
   background: white;
   padding: 5px;
-  border: solid gray 1px;
   border-bottom: none;
 }
 
@@ -342,6 +377,7 @@ padding: 6px;
 {
   font-size: 16px;
   margin-bottom: 5px;
+  padding: 10px;
 }
 .checkboxDiv
 {
@@ -425,10 +461,23 @@ padding: 6px;
   z-index: 99;
   overflow: auto;
   display: none;
+  min-width: 800px;
+  max-width: 1200px;
 }
 
+#advancedSettings {
+  position: fixed;
+  top: 435px;
+  left:100px;
+  background:white;
+  border: black solid 1px;
+  -webkit-box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  width: 300px;
+  display: none;
+}
 .controlButton {
-  width: 125px;
+  width: 175px;
 }
 
 .calculateButton {
@@ -451,6 +500,73 @@ padding: 6px;
 }
 .routeLabelButton {
   font-size:10px;
+}
+
+#lcolo2 {
+  width: 27%;
+  position: absolute;
+  left:1%;
+  font-size:12px;
+
+}
+
+#mcolo2 {
+  width: 44%;
+  position: absolute;
+  left:28%;
+  font-size:12px;
+}
+
+#rcolo2 {
+  position: absolute;
+  width: 26%;
+  right:1%;
+  font-size:12px;
+}
+
+#homemap {
+  width:100%;
+}
+
+#startExploring {
+  position:relative;
+  font-size:20px;
+  font-weight: 900;
+  text-align: center;
+  height:50px;
+  background: #f3db77;
+  padding-top:15px;
+  cursor:pointer;
+  border-radius: 5px;
+  color: #832530;
+}
+#leftblurb {
+  position: absolute;
+  width: 50%;
+  font-size: 14px;
+  color: #b22358;
+}
+#rightblurb {
+  position: absolute;
+  left: 50%;
+  width:50%;
+  font-size: 14px;
+  color:#2093b6;
+}
+
+div.circle {
+  height:100px;
+  width:100px;
+  border-radius: 100px;
+  margin-right:5px;
+  color:white;
+  text-align: center;
+  font-size: 12px;
+  position: absolute;
+}
+
+div.circle > p {
+  margin-top: 5px;
 }
 
 /* Imported */

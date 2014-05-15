@@ -2,6 +2,7 @@
 <head>
   <title>ORBIS v2 (.2)</title>
   <link type="text/css" rel="stylesheet" href="orbis.css" />
+  <link type="text/css" rel="stylesheet" href="chosen.min.css" />
   <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
   <meta charset="utf-8" />
 </head>
@@ -30,6 +31,8 @@
   <div id="vizcontainer">
     <div id="legendmodal" class="popup">
       <span id="infoclosebutton" onclick="d3.select('#legendmodal').style('display','none');d3.select('#legendDisplayButton').style('display','block');" >X</span>
+      <span id="legendTitle">Legend</span>
+            <button onclick="createVoronoi();">Regions</button><img data="voronoi" class="helpicon" src="helpq.png" />
       <svg id="legendSVG"></svg>
     </div>
     <div id="routemodal" class="modal"></div>
@@ -54,15 +57,10 @@
         <p>Here's some tutorial content.</p>
       </div>
     </div>
-    <div id="stickynote" class="tutorial" style="opacity:0;pointer-events:none;min-height:1px;height:28px; width: 200px;right:135px;top:460px;">
-      <div id="stickyarrow" style="width:20px;height:20px;transform: rotate(45deg);-ms-transform: rotate(45deg);-webkit-transform: rotate(45deg);background:white;  border-right: solid 2px lightgray;border-top: solid 2px lightgray;position:absolute;right:-12px;top:3px;"></div>
-      <div id="stickycontent" >
-        <div style="padding:3 0 0;">Click here for a tutorial</div>
-      </div>
-    </div>
+
 
   </div>
-    <div class="controlsDiv" style="padding: 0 10px 10px;top: 10%; right: 10px; width: 200px;">
+    <div class="controlsDiv" style="padding: 0 10px 10px;top: 40px; right: 0px; width: 200px;">
     <div class="buttonContainer">
       <span class="fieldTitle">Map Controls</span>
       <fieldset style="margin-top:-8px;">
@@ -74,14 +72,13 @@
       <fieldset style="margin-top:-8px;">
       <button id="startBrushingButton" onclick="startBrushing();">Select Sites</button><img data="selectsites" class="helpicon" src="helpq.png" />
       <button id="stopBrushingButton" style="display:none;" onclick="stopBrushing();">Stop Selecting</button>
-      <button id="resetMapButton" style="color:red;" onclick="">Reset Map</button>
+      <button id="resetMapButton" onclick="resetMap();" onclick="">Reset Map</button>
       </fieldset>
       <span class="fieldTitle">Map Functions</span>
       <fieldset style="margin-top:-8px;">
-      <button onclick="createVoronoi();">Regions</button><img data="voronoi" class="helpicon" src="helpq.png" />
       <button onclick="clusterSitesUI()">Cluster</button><img data="cluster" class="helpicon" src="helpq.png" />
-      <div style="display:none;" id="cartoOffButton"><button class="controlButton" onclick="cartogramOff()">Georectify</button><img data="georectify" class="helpicon" src="helpq.png" /></div>
-      <div style="display:none;" id="cartoOnButton"><button class="controlButton">Cost Cartogram</button><img data="cartogramon" class="helpicon" src="helpq.png" /></div>
+      <div style="display:none;width:100px;" id="cartoOffButton"><button class="controlButton" onclick="cartogramOff()">Georectify</button><img data="georectify" class="helpicon" src="helpq.png" /></div>
+      <div style="display:none;width:100px;" id="cartoOnButton"><button class="controlButton">Cost Cartogram</button><img data="cartogramon" class="helpicon" src="helpq.png" /></div>
       <button id="sankeyButton" style="display:none;" onclick="sankeyOff();">Flow Off</button>
       </fieldset>
       <span class="fieldTitle">Display</span>
@@ -98,84 +95,109 @@
       <button onclick="d3.select(this.parentNode).style('display', 'none');d3.select('#legendmodal').style('display', 'block');">Legend</button>
         </div>
       </fieldset>
+      <div style="display:none;">
       <span class="fieldTitle">Network Color</span>
       <fieldset style="margin-top:-8px;">
-      <button id="eButton" class="routeLabelButton" onclick="colorBy('e')">Expense</button><img data="networkcolor" class="helpicon" src="helpq.png" />
+      <div style="width:100%;"><button id="eButton" class="routeLabelButton" onclick="colorBy('e')">Expense</button><img data="networkcolor" class="helpicon" src="helpq.png" /></div>
       <button id="sButton" class="routeLabelButton" onclick="colorBy('s')">Speed</button> <button id="tButton" class="routeLabelButton active" onclick="colorByType()">Mode</button>
       </fieldset>
+      </div>
       <button style="display:none;" onclick="testCommunities(exposedsites,exposedroutes,d3.selectAll('g.site'))">Network Communities</button>
       <span class="fieldTitle">Tools</span>
       <fieldset style="margin-top:-8px;">
       <button onclick="d3.select('#controlbar').style('display', 'none');d3.selectAll('#resultsTable').style('display', 'block');d3.selectAll('.resultsRow').style('display', 'block');d3.selectAll('tr.resultsRow').style('display','table-row');">History</button><img data="browse" class="helpicon" src="helpq.png" />
-      <button onclick="tutorial(1);">Tutorial</button>
+      <div style="position:relative;"><button onclick="tutorial(1);">Tutorial</button>
+            <div id="stickynote" class="tutorial" style="z-index:5;opacity:0;pointer-events:none;min-height:1px;height:28px; width: 200px;left:-250px;top:-5px;">
+      <div id="stickyarrow" style="width:20px;height:20px;transform: rotate(45deg);-ms-transform: rotate(45deg);-webkit-transform: rotate(45deg);background:white;  border-right: solid 2px lightgray;border-top: solid 2px lightgray;position:absolute;right:-12px;top:3px;"></div>
+      <div id="stickycontent" >
+        <div style="padding:3 0 0;">Click here for a tutorial</div>
+      </div>
+    </div>
+      </div>
       <button onclick="exportSVG();">Export SVG</button><img data="exportsvg" class="helpicon" src="helpq.png" />
       <a id="svgDownload">Download SVG</a>
+      <button onclick="psStyle();"><img width="50px;" src="ps.png" /></button>
+      
       </fieldset>
     </div>
     </div>
 
-  <div class="controlsDiv" id="controlbar" style="top: 10%; left: 10px; height:auto; width: 290px; padding:0px 10px 20px;">
-    <a class="tab" id="routTab" onmouseover="contextualHelp('route')" onmouseout="d3.select('#infopopup').style('display','none')" onclick="switchControls('route');" style="left:5px;">Route</a>
-    <a class="tab backtab" id="cartTab" onmouseover="contextualHelp('cartogram')" onmouseout="d3.select('#infopopup').style('display','none')" onclick="switchControls('cartogram');" style="left:62px;">Network</a>
-    <a class="tab backtab" id="minTab" onmouseover="contextualHelp('minard')" onmouseout="d3.select('#infopopup').style('display','none')" onclick="switchControls('Minard');" style="left:138px;">Flow</a>
-    <div class="buttonContainer" style="width:200px">
-      <div id="sourceSelectParent" style="width:100%;">
-        <span id="sourceSelectLabel">From</span>:
+  <div class="controlsDiv" id="controlbar" style="top: 68px; left: 0px; height:auto; width: 290px; padding:0px 10px 20px;">
+    <a class="tab" id="routTab" onmouseover="contextualHelp('route')" onmouseout="d3.select('#infopopup').style('display','none')" onclick="switchControls('route');" style="left:0px;width:100px;">Route</a>
+    <a class="tab backtab" id="cartTab" onmouseover="contextualHelp('cartogram')" onmouseout="d3.select('#infopopup').style('display','none')" onclick="switchControls('cartogram');" style="left:100px;width:100px;border-right: solid gray 1px;border-left: solid gray 1px;">Network</a>
+    <a class="tab backtab" id="minTab" onmouseover="contextualHelp('minard')" onmouseout="d3.select('#infopopup').style('display','none')" onclick="switchControls('Minard');" style="left:212px;width:88px;">Flow</a>
+    <div class="buttonContainer" style="height:80px;">
+      <div id="sourceSelectParent" style="width:100%;margin-bottom:20px;">
+        <span style="width:25px;" id="sourceSelectLabel">From</span>:
       </div>
-        <div style="width:100%;" id="targetSelectLabel">To: <select id="targetSelectButton" class="controlButton">
+        <div style="width:100%;" id="targetSelectLabel"><span style="width:25px;margin-right: 19px;">To:</span> <select id="targetSelectButton" class="controlButton">
         </select>
         </div>
-            <div id="directionDiv" style="margin-top:10px;display:none;width:100%;"><span class="fieldTitle">Direction</span>
+            <div id="directionDiv" style="margin-top:-15px;display:none;width:100%;"><span class="fieldTitle">Direction</span>
             <fieldset style="margin-top:-8px;" id="directionPicker">
       <div style="width:100%;">
       <input type="radio" name="direction" value="0" id="from" checked>
       <label for="from" class="direction-picker-label">From</label>
-</div>
-      <div style="width:100%;">
-      <input type="radio" name="direction" value="1" id="to">
+      <input style="margin-left:30px;" type="radio" name="direction" value="1" id="to">
       <label for="to" class="direction-picker-label">To</label>
 </div>
             </fieldset>
             </div>
     </div>
     <div class="buttonContainer">
-      <span class="fieldTitle">Month of Departure</span>
-      <fieldset style="margin-top:-8px;" id="monthPicker">
-      <input type="radio" name="month" value="1" id="jan">
-      <label for="jan" class="month-picker-label">Jan</label>
-      <input type="radio" name="month" value="2" id="feb">
-      <label for="feb" class="month-picker-label">Feb</label>
-      <input type="radio" name="month" value="3" id="mar">
-      <label for="mar" class="month-picker-label">Mar</label>
-      <input type="radio" name="month" value="4" id="apr">
-      <label for="apr" class="month-picker-label">Apr</label>
-      <input type="radio" name="month" value="5" id="may">
-      <label for="may" class="month-picker-label">May</label>
-      <input type="radio" name="month" value="6" id="jun">
-      <label for="jun" class="month-picker-label">Jun</label>
-      <input type="radio" name="month" value="7" id="jul" checked>
-      <label for="jul" class="month-picker-label">Jul</label>
-      <input type="radio" name="month" value="8" id="aug">
-      <label for="aug" class="month-picker-label">Aug</label>
-      <input type="radio" name="month" value="9" id="sep">
-      <label for="sep" class="month-picker-label">Sep</label>
-      <input type="radio" name="month" value="10" id="oct">
-      <label for="oct" class="month-picker-label">Oct</label>
-      <input type="radio" name="month" value="11" id="nov">
-      <label for="nov" class="month-picker-label">Nov</label>
-      <input type="radio" name="month" value="12" id="dec">
-      <label for="dec" class="month-picker-label">Dec</label>
+      <button onclick="showHide('travelMonth');" style="font-size:10px;font-weight:900;position:absolute;right:1px;">+</button>
+      <span class="fieldTitle" id="travelMonthLabel">Season of Departure</span>
+      <fieldset style="padding-top: 10px;margin-top:-8px;" id="monthPicker">
+      <input type="radio" name="month" class="season" value="1" id="winter">
+      <label for="winter" class="month-picker-label season"><img class="season" style="height:36px;" src="winter.png" /></label>
+      <input type="radio" name="month" class="season" value="4" id="spring">
+      <label for="spring" class="month-picker-label season"><img class="season" style="height:36px;" src="spring.png" /></label>
+      <input type="radio" name="month" class="season" value="7" id="summer" checked>
+      <label for="summer" class="month-picker-label season"><img class="season" style="height:36px;" src="summer.png" /></label>
+      <input type="radio" name="month" class="season" value="9" id="fall">
+      <label for="fall" class="month-picker-label season"><img class="season" style="height:36px;" src="fall.png" /></label>
+
+      <input style="display:none;" type="radio" name="month" value="1" id="jan">
+      <label style="display:none;" for="jan" class="month-picker-label">Jan</label>
+      <input style="display:none;" type="radio" name="month" value="2" id="feb">
+      <label style="display:none;" for="feb" class="month-picker-label">Feb</label>
+      <input style="display:none;" type="radio" name="month" value="3" id="mar">
+      <label style="display:none;" for="mar" class="month-picker-label">Mar</label>
+      <input style="display:none;" type="radio" name="month" value="4" id="apr">
+      <label style="display:none;" for="apr" class="month-picker-label">Apr</label>
+      <input style="display:none;" type="radio" name="month" value="5" id="may">
+      <label style="display:none;" for="may" class="month-picker-label">May</label>
+      <input style="display:none;" type="radio" name="month" value="6" id="jun">
+      <label style="display:none;" for="jun" class="month-picker-label">Jun</label>
+      <input style="display:none;" type="radio" name="month" value="7" id="jul">
+      <label style="display:none;" for="jul" class="month-picker-label">Jul</label>
+      <input style="display:none;" type="radio" name="month" value="8" id="aug">
+      <label style="display:none;" for="aug" class="month-picker-label">Aug</label>
+      <input style="display:none;" type="radio" name="month" value="9" id="sep">
+      <label style="display:none;" for="sep" class="month-picker-label">Sep</label>
+      <input style="display:none;" type="radio" name="month" value="10" id="oct">
+      <label style="display:none;" for="oct" class="month-picker-label">Oct</label>
+      <input style="display:none;" type="radio" name="month" value="11" id="nov">
+      <label style="display:none;" for="nov" class="month-picker-label">Nov</label>
+      <input style="display:none;" type="radio" name="month" value="12" id="dec">
+      <label style="display:none;" for="dec" class="month-picker-label">Dec</label>
     </fieldset>
     </div>
 
     <div class="buttonContainer">
             <span class="fieldTitle">Priority</span>
-      <fieldset style="margin-top:-8px;padding-bottom: 0;">
-      <form id="priorityForm"><input onclick="changePriority('f')" type="radio" value="0" name="priority" checked>Fastest</input><input onclick="changePriority('c')" type="radio" value="1" name="priority">Cheapest</input><input  onclick="changePriority('f')" type="radio" value="2" name="priority">Shortest</input></form>
+      <fieldset style="margin-top:-8px;" id="priorityForm">
+        <input onclick="changePriority('f')" type="radio" value="0" name="priority" id="fp" checked>
+        <label for="fp" class="priority-picker-label">Fastest</label>
+        <input onclick="changePriority('c')" type="radio" value="1" name="priority" id="cp">
+        <label for="cp" class="priority-picker-label">Cheapest</label>
+        <input  onclick="changePriority('f')" type="radio" value="2" name="priority" id="sp">
+        <label for="sp" class="priority-picker-label">Shortest</label>
       </fieldset>
     </div>
 
-    <div class="buttonContainer" style="width:210px">
+    <div class="buttonContainer" id="networkModeContainer" style="width:230px;height:20px;overflow:hidden;">
+      <button onclick="showHide('networkModes');" style="font-size:10px;font-weight:900;position:absolute;right:1px;">+</button>
             <span class="fieldTitle">Network Modes</span>
       <fieldset style="margin-top:-8px;padding-bottom: 0;">
       <form id="modeForm" onclick="updateBGRoutes();">
@@ -197,12 +219,14 @@
         </div>
       </form>
       <div style="width:100%">
-      Transfer cost: <input type="text" style="width:30px;" id="transferCost" class="controlButton" onclick="colorByType()" /> days<img data="transfer" class="helpicon" src="helpq.png" />
+      River Transfer Cost: <input type="text" style="width:30px;" id="riverTransferCost" class="controlButton" /><img data="transfer" class="helpicon" src="helpq.png" />
+      Sea Transfer Cost: <input type="text" style="width:30px;" id="seaTransferCost" class="controlButton" /><img data="transfer" class="helpicon" src="helpq.png" />
       </div>
       </fieldset>
 
     </div>
-    <div class="buttonContainer">
+    <div id="aquaticOptionsContainer" style="overflow:hidden;height:20px;" class="buttonContainer">
+      <button onclick="showHide('aquaticOptions');" style="font-size:10px;font-weight:900;position:absolute;right:1px;">+</button>
       <span class="fieldTitle">Aquatic Options</span>
       <fieldset style="margin-top:-8px;padding-bottom: 0;">
         <div style="width:100%">
@@ -227,8 +251,8 @@
       <select id="vehicleSelectButton" style="width:170px;" class="controlButton" onclick="colorBy('e')">
         </select>
         </div>
-        <div style="width:100%">
-        <button style="margin-left:170px;color:red;">Advanced</button><img data="advanced" class="helpicon" src="helpq.png" />
+        <div style="width:100%;display:none;">
+        <button style="margin-left:170px;color:red;display:none;">Advanced</button><img data="advanced" class="helpicon" src="helpq.png" />
         </div>
       </fieldset>
     </div>
@@ -238,13 +262,13 @@
       <button class="controlButton calculateButton" style="background: #4d8ffd;color:white;" id="routeCalculateButton" onclick="calculateRoute()">Calculate Route</button>
       <button class="controlButton calculateButton" id="cartoCalculateButton" style="background: #4d8ffd;color:white;display:none;" onclick="calculateCarto()">Calculate Network</button>
       <button class="controlButton calculateButton" id="sankeyCalculateButton" style="background: #4d8ffd;color:white;display:none;" onclick="calculateSankey()">Calculate Flow</button>
-          <div id="routeResults"></div>
     </div>
   </div>
       <div id="resultsTable" style="display:none;background:white;border:1px black solid;position:absolute;left:0px;top:10%;height:80%;width:540px;overflow: hidden;z-index: 99;">
       <div>
-        <button onclick="d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.cartoRow').style('display','block');d3.selectAll('tr.cartoRow').style('display','table-row');">Cartograms</button>
-        <button onclick="d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.routeRow').style('display','block');d3.selectAll('tr.routeRow').style('display','table-row');">Routes</button>
+        <button onclick="d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.networkRow').style('display','block');d3.selectAll('tr.networkRow').style('display','table-row');">Route</button>
+        <button onclick="d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.routeRow').style('display','block');d3.selectAll('tr.routeRow').style('display','table-row');">Network</button>
+        <button onclick="d3.selectAll('.resultsRow').style('display', 'none');d3.selectAll('.flowRow').style('display','block');d3.selectAll('tr.flowRow').style('display','table-row');">Flow</button>
         <button onclick="d3.selectAll('.resultsRow').style('display', 'block');d3.selectAll('tr.resultsRow').style('display','table-row');">All</button>
         <button onclick="d3.selectAll('.resultsContainer').style('display', 'none');d3.selectAll('#recentGrid').style('display', 'block');">Grid View</button>
         <button onclick="d3.selectAll('.resultsContainer').style('display', 'none');d3.selectAll('#recentList').style('display', 'block');">List View</button>
@@ -277,22 +301,29 @@
         </table>
       </div>
     </div>
-      <div id="sankeyChart">
-        <svg width="100%" height="100%"></svg>
-      </div>
+      <div id="advancedSettings">
+        <input type="text" value=".028">Road d/km</input>
+        <input type="text" value=".0034">Downstream d/km</input>
+       <input type="text" value=".0034">Upstream d/km</input>
+       <input type="text" value="0.1">Sea d/day</input>
+       <input type="text" value="0.0">River Transfer</input>
+       <input type="text" value="0.0">Sea Transfer</input>
+     </div>
   <div id="timelineViz">
-    <a id="tlbPerspective" class="tab" style="left:20px;" >Perspective</a>
-    <a id="tlbDuration" class="tab backtab" style="left:116px;" >Duration</a>
-    <a id="tlbDistance" class="tab backtab" style="left:188px;" >Distance</a>
-    <a id="tlbExpensed" class="tab backtab" style="left:263px;" >Expense (D)</a>
-    <a id="tlbExpensew" class="tab backtab" style="left:359px;" >Expense (W)</a>
-    <a id="tlbExpensec" class="tab backtab" style="left:459px;" >Expense (C)</a>
+    <a id="tlbPerspective" class="tab" style="left:360px;" >Perspective</a>
+    <a id="tlbDuration" class="tab backtab" style="left:456px;" >Duration</a>
+    <a id="tlbDistance" class="tab backtab" style="left:528px;" >Distance</a>
+    <a id="tlbExpensed" class="tab backtab" style="left:603px;" >Expense (D)</a>
+    <a id="tlbExpensew" class="tab backtab" style="left:699px;" >Expense (W)</a>
+    <a id="tlbExpensec" class="tab backtab" style="left:799px;" >Expense (C)</a>
     <a id="infoclosebutton" onclick="d3.select('#routesContainer').style('opacity', 1);d3.select('#timelineViz').style('display','none');" >X</a>
-<svg id="timelineSVG" width="100%" height="100%">
+          <div id="routeResults"></div>
+
+<svg id="timelineSVG" width="100%" height="100%" style="position:relative;left:340px">
   <g id="tlXAxis" class="tlAxis" transform="translate(0,100)"></g>
   <g id="tlYAxis" class="tlAxis" transform="translate(60,0)"></g>
-  <text id="tlYLabel" x="10" y="15">Longitude</text>
-  <text id="tlXLabel" x="90" y="115">Latitude</text>
+  <text id="tlYLabel" transform="rotate(-90)" x="-80" y="50">Longitude</text>
+  <text id="tlXLabel" x="70" y="115">Latitude</text>
 </svg>
 
   </div>
@@ -309,6 +340,9 @@ Published by <a href="http://library.stanford.edu">Stanford University Libraries
 </script> <script src="orbis.js" type="text/javascript">
 </script> <script src="community.js" type="text/javascript">
 </script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js" type="text/javascript"></script>
+  <script src="chosen.jquery.min.js" type="text/javascript"></script>
+  <script src="prism.js" type="text/javascript" charset="utf-8"></script>
   </footer>
 </body>
 </html>
