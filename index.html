@@ -29,6 +29,10 @@
   <div id="restoreButton" style="display: none;position: fixed; top:40px; right:10px;"><button style="cursor:pointer;" onclick="restoreControlsMap();">Controls</button></div>
 
   <div id="vizcontainer">
+    <div id="mapControls">
+      <button class="zoomButton" id="zoomInButton" onclick="zoomManual('in');">+</button>
+      <button class="zoomButton" id="zoomOutButton" onclick="zoomManual('out');">-</button>
+    </div>
     <div id="legendmodal" class="popup">
       <span id="infoclosebutton" onclick="d3.select('#legendmodal').style('display','none');d3.select('#legendDisplayButton').style('display','block');" >X</span>
       <span id="legendTitle">Legend</span>
@@ -62,10 +66,27 @@
   </div>
     <div class="controlsDiv" style="padding: 0 10px 10px;top: 40px; right: 0px; width: 200px;">
     <div class="buttonContainer">
+    <div id="displayOptionsContainer" style="overflow:hidden;height:150px;" class="buttonContainer">
+      <button onclick="showHide('displayOptions');" style="font-size:10px;font-weight:900;position:absolute;right:1px;">+</button>
+      <span class="fieldTitle">Display</span>
+      <fieldset style="margin-top:-8px;">
+        <div style="width:100%;">
+      <div class="eyeButton" id="terrainOnButton" onclick="mapOff();"><svg class="eye" height="10" width="15"></svg>Terrain</div></div>
+        <div style="width:100%;">
+      <div class="eyeButton" id="labelsOnButton" onclick="temporaryLabels();"><svg class="eye" height="10" width="15"></svg>Names</div></div>
+        <div style="width:100%;">
+      <div class="eyeButton" id="sitesOnButton" onclick="sitesOff();"><svg class="eye" height="10" width="15"></svg>Sites</div></div>
+        <div style="width:100%;">
+      <div class="eyeButton" id="networkOnButton" onclick="networkOff(false);"><svg class="eye" height="10" width="15"></svg>Network</div></div>
+        <div style="width:100%;" id="networkDisplayButton">
+      <div class="eyeButton" id="borderOnButton" onclick="provincesOnOff();"><svg class="eye" height="10" width="15"></svg>Provinces</div></div>
+        <div style="width:100%;" id="borderDisplayButton">
+      <div class="eyeButton" onclick="d3.select('#legendmodal').style('display', 'block');"><svg class="eye" height="10" width="15"></svg>Legend</div>
+        </div>
+      </fieldset>
+    </div>
       <span class="fieldTitle">Map Controls</span>
       <fieldset style="margin-top:-8px;">
-      <button onclick="zoomManual('in');">Zoom in</button>
-      <button onclick="zoomManual('out');">Zoom out</button>
       <button onclick="fullscreenMap();">Full Screen</button>
       </fieldset>
       <span class="fieldTitle">Site Controls</span>
@@ -80,20 +101,6 @@
       <div style="display:none;width:100px;" id="cartoOffButton"><button class="controlButton" onclick="cartogramOff()">Georectify</button><img data="georectify" class="helpicon" src="helpq.png" /></div>
       <div style="display:none;width:100px;" id="cartoOnButton"><button class="controlButton">Cost Cartogram</button><img data="cartogramon" class="helpicon" src="helpq.png" /></div>
       <button id="sankeyButton" style="display:none;" onclick="sankeyOff();">Flow Off</button>
-      </fieldset>
-      <span class="fieldTitle">Display</span>
-      <fieldset style="margin-top:-8px;">
-        <div style="width:50%;float:left;">
-      <button id="terrainOnButton" onclick="mapOff();">Terrain</button></div>
-        <div style="width:50%;float:left;">
-      <button id="labelsOnButton" style="background: #767676;" onclick="temporaryLabels();">Names</button></div>
-        <div style="width:50%;float:left;">
-      <button id="sitesOnButton" onclick="sitesOff();">Sites</button></div>
-        <div style="width:50%;float:left;">
-      <button id="networkOnButton" onclick="networkOff();">Network</button></div>
-        <div style="width:50%;float:left;display:none;" id="legendDisplayButton">
-      <button onclick="d3.select(this.parentNode).style('display', 'none');d3.select('#legendmodal').style('display', 'block');">Legend</button>
-        </div>
       </fieldset>
       <div style="display:none;">
       <span class="fieldTitle">Network Color</span>
@@ -310,20 +317,20 @@
        <input type="text" value="0.0">Sea Transfer</input>
      </div>
   <div id="timelineViz">
-    <a id="tlbPerspective" class="tab" style="left:360px;" >Perspective</a>
-    <a id="tlbDuration" class="tab backtab" style="left:456px;" >Duration</a>
-    <a id="tlbDistance" class="tab backtab" style="left:528px;" >Distance</a>
-    <a id="tlbExpensed" class="tab backtab" style="left:603px;" >Expense (D)</a>
-    <a id="tlbExpensew" class="tab backtab" style="left:699px;" >Expense (W)</a>
-    <a id="tlbExpensec" class="tab backtab" style="left:799px;" >Expense (C)</a>
+    <a id="tlbPerspective" class="tab routeComps" style="left:515px;" >Perspective</a>
+    <a id="tlbDuration" class="tab backtab routeComps" style="left:606px;" >Duration</a>
+    <a id="tlbDistance" class="tab backtab routeComps" style="left:678px;" >Distance</a>
+    <a id="tlbExpensed" class="tab backtab routeComps" style="left:749px;" >Donkey</a>
+    <a id="tlbExpensew" class="tab backtab routeComps" style="left:813px;" >Wagon</a>
+    <a id="tlbExpensec" class="tab backtab routeComps" style="left:873px;" >Carriage</a>
     <a id="infoclosebutton" onclick="d3.select('#routesContainer').style('opacity', 1);d3.select('#timelineViz').style('display','none');" >X</a>
           <div id="routeResults"></div>
 
-<svg id="timelineSVG" width="100%" height="100%" style="position:relative;left:340px">
-  <g id="tlXAxis" class="tlAxis" transform="translate(0,100)"></g>
-  <g id="tlYAxis" class="tlAxis" transform="translate(60,0)"></g>
-  <text id="tlYLabel" transform="rotate(-90)" x="-80" y="50">Longitude</text>
-  <text id="tlXLabel" x="70" y="115">Latitude</text>
+<svg id="timelineSVG" width="100%" height="100%" style="position:relative;left:460px">
+  <g id="tlXAxis" class="tlAxis routeComps" transform="translate(0,100)"></g>
+  <g id="tlYAxis" class="tlAxis routeComps" transform="translate(60,0)"></g>
+  <text id="tlYLabel" class="routeComps" transform="rotate(-90)" x="-80" y="50">Longitude</text>
+  <text id="tlXLabel" class="routeComps" x="70" y="115">Latitude</text>
 </svg>
 
   </div>

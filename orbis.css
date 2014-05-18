@@ -49,6 +49,51 @@ button.disabled {
   text-decoration: underline;
 }
 
+#mapControls {
+  position: fixed;
+  z-index: 3;
+  right: 300px;
+  top: 50px;
+  width:10px;
+}
+.zoomButton {
+  font-size:22px;
+  font-weight:900;
+  border: none;
+  height:35px;
+  width:35px;
+}
+
+#zoomInButton {
+  -webkit-border-top-left-radius: 15px;
+-webkit-border-top-right-radius: 15px;
+-moz-border-radius-topleft: 15px;
+-moz-border-radius-topright: 15px;
+border-top-left-radius: 15px;
+border-top-right-radius: 15px;
+}
+#zoomoutButton {
+  -webkit-border-bottom-left-radius: 15px;
+-webkit-border-bottom-right-radius: 15px;
+-moz-border-radius-bottomleft: 15px;
+-moz-border-radius-bottomright: 15px;
+border-top-bottom-radius: 15px;
+border-top-bottom-radius: 15px;
+}
+
+svg.eye {
+  margin-top:4px;
+  margin-right:5px;
+}
+
+.eyeButton {
+  cursor:pointer;
+}
+
+.eyeButton:hover {
+  text-decoration: underline
+}
+
 #controlbar {
   height:100px;
 }
@@ -166,7 +211,7 @@ button.disabled {
 }
 
 #routeResults {
-  width: 300px;
+  width: 460px;
   overflow:hidden;
   border: 5px solid #F0F0F0;
   position: absolute;
@@ -174,10 +219,26 @@ button.disabled {
   bottom: 0;
   padding: 0 15px;
   font-size:12px;
+  height:110px;
 }
 
 #routeResults > p {
   padding: 5px 0;
+}
+
+.rrLeft {
+  width: 150px;  
+  float: left;
+}
+
+.rrMid {
+  width: 150px;
+  float: left;
+}
+
+.rrRight {
+  width: 160px;
+  float: left;
 }
 
 #sitemodal {
@@ -333,7 +394,7 @@ opacity: 1;
 .tab {
   position: absolute;
   z-index: 1;
-  top: -28px;
+  top: -29px;
   background: white;
   padding: 5px;
   border-bottom: none;
@@ -463,6 +524,8 @@ padding: 6px;
   display: none;
   min-width: 800px;
   max-width: 1200px;
+  min-height: 490px;
+
 }
 
 #advancedSettings {
@@ -519,8 +582,9 @@ padding: 6px;
 
 #rcolo2 {
   position: absolute;
-  width: 26%;
-  right:1%;
+  top:20px;
+  width: 23%;
+  left: 73%;
   font-size:12px;
 }
 
@@ -539,6 +603,10 @@ padding: 6px;
   cursor:pointer;
   border-radius: 5px;
   color: #832530;
+}
+
+#startExploring:hover {
+  background: #f7e9ad;
 }
 #leftblurb {
   position: absolute;
@@ -565,8 +633,21 @@ div.circle {
   position: absolute;
 }
 
+div.circle:hover {
+  cursor:pointer;
+  border:3px black solid;
+}
+
 div.circle > p {
-  margin-top: 5px;
+  margin-top: 15px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+div.circle > p.introblurb {
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 100;
 }
 
 /* Imported */
